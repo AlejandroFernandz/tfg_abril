@@ -46,7 +46,7 @@ def home():
 
 @app.route("/mapa")
 def mostrar_mapa():
-    """Sirve el HTML del mapa completo con pestañas."""
+    """Sirve el HTML del mapa completo."""
     # return send_from_directory(MAPA_DIR, MAPA_HTML)
     resp = make_response(send_from_directory(MAPA_DIR, MAPA_HTML))
     return nocache(resp)
@@ -55,12 +55,6 @@ def mostrar_mapa():
 def mapa_actuales():
     # return send_from_directory(MAPA_DIR, "mapa_actuales.html")
     resp = make_response(send_from_directory(MAPA_DIR, "mapa_actuales.html"))
-    return nocache(resp)
-
-@app.route("/mapa_futuros.html")
-def mapa_futuros():
-    # return send_from_directory(MAPA_DIR, "mapa_futuros.html")
-    resp = make_response(send_from_directory(MAPA_DIR, "mapa_futuros.html"))
     return nocache(resp)
 
 if __name__ == "__main__":

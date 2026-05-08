@@ -280,107 +280,6 @@ def create_actuales_map(eventos_df, radares_df, output_file="mapa_actuales.html"
     add_segment_line_js(base_map, max_km=50) 
     save_atomic(base_map, output_file)
 
-def create_futuros_map(eventos_df, output_file="mapa_futuros.html"):
-    OFFSET = 0.0001
-    added_locations = set()
-
-    base_map = folium.Map(location=[40.4168, -3.7038], zoom_start=6)
-
-    cluster_eventos = MarkerCluster(name="Eventos futuros agrupados", maxClusterRadius=50, disableClusteringAtZoom=15).add_to(base_map)
-
-    def añadir_eventos(df, fijos_fg, tramos_fg):
-        for _, event in df.iterrows():
-            icon_name, icon_color = icono_por_tipo(event.get("cause_type_raw") or "unknown") # 21-01
-            provincia = event["provincia"]
-
-            # Eventos fijos
-            if pd.notna(event.get("latitude")) and pd.notna(event.get("longitude")):
-                lat, lon = event["latitude"], event["longitude"]
-                while (lat, lon) in added_locations:
-                    lat += OFFSET
-                    lon += OFFSET
-                added_locations.add((lat, lon))
-
-                html_popup = f"""
-                <div data-provincia="{provincia}" data-lat="{lat}" data-lng="{lon}">
-                    <b>EVENTO FUTURO</b><br>ID: {event['id']}<br>{event['type']} ({event['probability']}) - {event['severity']}<br>
-                    Carretera {event['road']} ({event['locality']}, Km {event['kilometro']})<br>
-                    Sentido de circulación: {event['sentido_kilometracion']}<br>
-                    Hora esperada: {event['start_time']}<br>
-                    Carril de circulación: {event['carril_usado']}
-                </div>
-                """
-
-                folium.Marker(
-                    location=[lat, lon],
-                    tooltip=f"{event['type']}<br>{provincia}",
-                    popup=folium.Popup(html_popup, max_width=300),
-                    icon=folium.Icon(color="purple", icon=icon_name, prefix="fa")
-                ).add_to(fijos_fg)
-
-
-            if pd.notna(event.get("latitude_ini")) and pd.notna(event.get("longitude_ini")):
-                lat_ini, lon_ini = event["latitude_ini"], event["longitude_ini"]
-                lat_fin, lon_fin = event["latitude_fin"], event["longitude_fin"]
-
-                while (lat_ini, lon_ini) in added_locations:
-                    lat_ini += OFFSET
-                    lon_ini += OFFSET
-                added_locations.add((lat_ini, lon_ini))
-
-                while (lat_fin, lon_fin) in added_locations:
-                    lat_fin += OFFSET
-                    lon_fin += OFFSET
-                added_locations.add((lat_fin, lon_fin))
-
-                seg_id = f"event_{event['id']}"
-
-                html_ini = f"""
-                <div data-seg="{seg_id}"
-                    data-lat-ini="{lat_ini}" data-lng-ini="{lon_ini}"
-                    data-lat-fin="{lat_fin}" data-lng-fin="{lon_fin}"
-                    data-provincia="{provincia}" data-lat="{lat_ini}" data-lng="{lon_ini}">
-                    <b>INICIO EVENTO FUTURO</b><br>ID: {event['id']}<br>{event['type']}<br>
-                    {event['road']} ({event.get('locality_ini','Desconocido')}, Km {event['kilometro_ini']})<br>
-                    Sentido de circulación: {event.get('sentido_kilometracion','Sentido desconocido')}<br>
-                    Hora esperada: {event['start_time']}<br>
-                    Carril de circulación: {event['carril_usado']}
-                </div>
-                """
-
-                html_fin = f"""
-                <div data-seg="{seg_id}"
-                    data-lat-ini="{lat_ini}" data-lng-ini="{lon_ini}"
-                    data-lat-fin="{lat_fin}" data-lng-fin="{lon_fin}"
-                    data-provincia="{provincia}" data-lat="{lat_fin}" data-lng="{lon_fin}">
-                    <b>FIN EVENTO FUTURO</b><br>ID: {event['id']}<br>{event['type']}<br>
-                    {event['road']} ({event.get('locality_fin','Desconocido')}, Km {event['kilometro_fin']})<br>
-                    Hora esperada: {event['start_time']}
-                </div>
-                """
-
-                folium.Marker(
-                    location=[lat_ini, lon_ini],
-                    tooltip=f"{event['type']}<br>{provincia}",
-                    popup=folium.Popup(html_ini, max_width=300),
-                    icon=folium.Icon(color="purple", icon=icon_name, prefix="fa")
-                ).add_to(tramos_fg)
-
-                folium.Marker(
-                    location=[lat_fin, lon_fin],
-                    tooltip=f"{event['type']}<br>{provincia}",
-                    popup=folium.Popup(html_fin, max_width=300),
-                    icon=folium.Icon(color="purple", icon=icon_name, prefix="fa")
-                ).add_to(tramos_fg)
-
-
-    añadir_eventos(eventos_df, cluster_eventos, cluster_eventos)
-
-    folium.LayerControl(collapsed=False).add_to(base_map)
-    expose_leaflet_map(base_map)
-    add_segment_line_js(base_map, max_km=50)   # 22-01 para segmentos entre popups
-    save_atomic(base_map, output_file)
-
 # Actualizar el mapa
 def update_map():
     from datetime import datetime, timezone
@@ -405,22 +304,14 @@ def update_map():
     ]
     opciones_provincia = "<br>".join([f'<option value="{prov}">{prov}</option>' for prov in provincias])    
 
-    # 4. Separar eventos en actuales y futuros en base a la hora de inicio del evento
+    # 4. Filtrar eventos actuales en base a la hora de inicio del evento
     now = datetime.now(timezone.utc)
     eventos_actuales = eventos_df[eventos_df["start_time_obj"] <= now]
-    eventos_futuros = eventos_df[eventos_df["start_time_obj"] > now]
 
-    # 5. Generar mapas individuales para eventos actuales y eventos futuros
+    # 5. Generar el mapa actual
     create_actuales_map(eventos_actuales, radares_df, "mapas_generados/mapa_actuales.html")
-    create_futuros_map(eventos_futuros, "mapas_generados/mapa_futuros.html")
 
-    # 6. Leer mapas generados
-    with open("mapas_generados/mapa_actuales.html", encoding="utf-8") as f:
-        mapa_actuales_html = f.read()
-    with open("mapas_generados/mapa_futuros.html", encoding="utf-8") as f:
-        mapa_futuros_html = f.read()
-
-    # 7. Crear HTML principal embebiendo los iframes
+    # 6. Crear HTML principal embebiendo el iframe
     html_con_tabs = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -431,11 +322,6 @@ def update_map():
         .layout {{ display: flex; height: 100vh; overflow: hidden; }}
         .sidebar {{ width: 250px; background: #f9f9f9; padding: 1em; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }}
         .main {{ flex-grow: 1; position: relative; }}
-        .tabs {{ display: flex; flex-direction: column; margin-top: 1em; }}
-        .tab {{ padding: 0.5em; cursor: pointer; border-left: 4px solid transparent; }}
-        .tab.active {{ background: #e0e0ff; border-left: 4px solid #007BFF; }}
-        .map-container {{ display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }}
-        .map-container.active {{ display: block; }}
     </style>
 </head>
 <body>
@@ -447,32 +333,16 @@ def update_map():
         <option value="Todas">Todas</option>
         {opciones_provincia}
     </select>
-    <div class="tabs">
-        <div class="tab active" data-tab="actuales">Eventos actuales y radares</div>
-        <div class="tab" data-tab="futuros">Eventos futuros</div>
-    </div>
   </div>
   <div class="main">
-    <div id="actuales" class="map-container active">
-        <iframe id="iframe_actuales" style="width:100%; height:100%; border:none;"></iframe>
-    </div>
-
-    <div id="futuros" class="map-container">
-        <iframe id="iframe_futuros" style="width:100%; height:100%; border:none;"></iframe>
-    </div>
+    <iframe id="iframe_actuales" style="width:100%; height:100%; border:none;"></iframe>
   </div>
 </div>
 
-    
-
 <script>
-    document.getElementById("iframe_actuales").src =
-        "/mapa_actuales.html?ts=" + Date.now();
+    const iframeActuales = document.getElementById("iframe_actuales");
+    iframeActuales.src = "/mapa_actuales.html?ts=" + Date.now();
 
-    document.getElementById("iframe_futuros").src =
-        "/mapa_futuros.html?ts=" + Date.now();
-
-    // Provincias y coordenadas para que se relacionen con las de la DGT (todas en mayusculas para que coincidan y se lean)
     const coordenadas_provincias = {{
     "A CORUÑA": [43.3623, -8.4115],
     "ALBACETE": [38.9943, -1.8585],
@@ -522,57 +392,30 @@ def update_map():
     "ZARAGOZA": [41.6488, -0.8891],
     "TODAS": [40.4168, -3.7038]
 }};
-    const tabs = document.querySelectorAll(".tab");
-    const containers = {{
-        actuales: document.getElementById("actuales"),
-        futuros: document.getElementById("futuros")
-    }};
 
-    function showTab(tabName) {{
-        tabs.forEach(t => t.classList.remove("active"));
-        document.querySelector(`.tab[data-tab="${{tabName}}"]`).classList.add("active");
-        Object.keys(containers).forEach(key => {{
-            containers[key].classList.toggle("active", key === tabName);
-        }});
-    }}
-
-    tabs.forEach(tab => {{
-        tab.addEventListener("click", () => showTab(tab.dataset.tab));
-    }});
-
-    showTab("actuales");
-
-    // 🔄 Refrescar automáticamente cada 5 minutos
-    setTimeout(() => {{
-        location.reload();
-    }}, 60000);  // Actualmente está cada 1 minuto - 300.000 ms = 5 minutos
-
-    // 🔍 Filtro por provincia con zoom
     document.getElementById("provinciaSelect").addEventListener("change", function () {{
-    const seleccion = this.value.trim().toUpperCase();
-    const coords = coordenadas_provincias[seleccion] || coordenadas_provincias["TODAS"];
-    const zoom = seleccion === "TODAS" ? 6 : 10;
+        const seleccion = this.value.trim().toUpperCase();
+        const coords = coordenadas_provincias[seleccion] || coordenadas_provincias["TODAS"];
+        const zoom = seleccion === "TODAS" ? 6 : 10;
 
-    const iframe = containers.actuales.classList.contains("active")
-        ? document.querySelector("#actuales iframe")
-        : document.querySelector("#futuros iframe");
-
-    const intentarZoom = () => {{
-        try {{
-            const mapa = iframe.contentWindow.map;
-            if (mapa && typeof mapa.setView === "function") {{
-                mapa.setView(coords, zoom);
-            }} else {{
+        const intentarZoom = () => {{
+            try {{
+                const mapa = iframeActuales.contentWindow.map;
+                if (mapa && typeof mapa.setView === "function") {{
+                    mapa.setView(coords, zoom);
+                }} else {{
+                    setTimeout(intentarZoom, 200);
+                }}
+            }} catch (e) {{
                 setTimeout(intentarZoom, 200);
             }}
-        }} catch (e) {{
-            setTimeout(intentarZoom, 200);
-        }}
-    }};
+        }};
+        intentarZoom();
+    }});
 
-    intentarZoom();
-}});
-
+    setTimeout(() => {{
+        location.reload();
+    }}, 300000);
 </script>
 
 </body>
@@ -588,4 +431,4 @@ def update_map():
 
     os.replace(temp_path, final_path)
 
-    print("[✅] Mapa principal generado con pestañas en: mapas_generados/mapa_completo.html")
+    print("[✅] Mapa principal generado en: mapas_generados/mapa_completo.html")
