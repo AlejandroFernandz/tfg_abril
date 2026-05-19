@@ -23,4 +23,7 @@ mapas_generados/*.tmp.html
 visualizaciones/**/*.csv
 visualizaciones/**/*.pbix
 
-requitements.txt
+analysis/**/*.csv
+analysis/**/*.pbix
+
+requirements.txt
