@@ -243,11 +243,27 @@ def parse_datex_historico_enriquecido(file_path: str) -> pd.DataFrame:
         severity = _text(situation.find("sit:severity", namespaces=ns))
 
         # start time
-        start_time_el = situation.find(".//com:validityTimeSpecification/com:overallStartTime", namespaces=ns)
+        start_time_el = situation.find(
+            ".//com:validityTimeSpecification/com:overallStartTime",
+            namespaces=ns
+        )
+
         start_time_str = _text(start_time_el)
         start_time_obj = _iso_to_utc(start_time_str)
-        start_time_fmt = start_time_obj.strftime("%H:%M:%S del %d-%m-%y") if start_time_obj else "Fecha de inicio desconocida"
 
+        # Hora
+        start_time_hora = (
+            start_time_obj.strftime("%H:%M:%S")
+            if start_time_obj
+            else None
+        )
+
+        # Fecha
+        start_time_fecha = (
+            start_time_obj.strftime("%d-%m-%Y")
+            if start_time_obj
+            else None
+        )
         road = _extract_road_old(situation, ns)
         provincia = _extract_provincia_old(situation, ns)
 
@@ -312,7 +328,8 @@ def parse_datex_historico_enriquecido(file_path: str) -> pd.DataFrame:
 
                         "carril_usado": carril_usado,
 
-                        "start_time": start_time_fmt,
+                        "start_time_hora": start_time_hora,
+                        "start_time_fecha": start_time_fecha,
                         "start_time_obj": start_time_obj,
 
                         "is_segment": False,
@@ -369,7 +386,8 @@ def parse_datex_historico_enriquecido(file_path: str) -> pd.DataFrame:
 
                         "carril_usado": carril_usado,
 
-                        "start_time": start_time_fmt,
+                        "start_time_hora": start_time_hora,
+                        "start_time_fecha": start_time_fecha,
                         "start_time_obj": start_time_obj,
 
                         "is_segment": True,
