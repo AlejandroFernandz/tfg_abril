@@ -1,3 +1,9 @@
+# Saca el csv base con los eventos traducidos y normalizados para sacar el resto de analisis derivados
+# Es un dataset raw que contiene todos los eventos de los xml
+# Los datos van desde 13 marzo 2025 → 22 mayo 2025, es decir, 71 dias, descargados en intervalos de una hora
+# Cada fila es un evento activo en el momento del snapshot, por lo que un mismo evento puede aparecer en varios snapshots si se mantiene activo
+# El csv resultante tiene 2.654.760 filas, que se reducen a 267.038 eventos únicos por id, lo que indica que muchos eventos se mantienen activos durante varios snapshots
+
 import os
 import glob
 import sys
@@ -105,8 +111,8 @@ def main():
 
     # Seleccionar solo las columnas que quieres exportar
     keep_columns = [
-        # "snapshot_datetime",
-        # "publication_time",
+        "snapshot_datetime",
+        "publication_time",
         "id",
         "cause_type",
         "cause_detail",
