@@ -320,28 +320,75 @@ def update_map():
     <style>
         body {{ font-family: sans-serif; margin: 0; padding: 0; overflow: hidden; height: 100vh; }}
         .layout {{ display: flex; height: 100vh; overflow: hidden; }}
-        .sidebar {{ width: 250px; background: #f9f9f9; padding: 1em; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }}
+        .sidebar {{ width: 260px; background: #f9f9f9; padding: 1em; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }}
         .main {{ flex-grow: 1; position: relative; }}
+        .tab-button {{ width: 100%; padding: 0.8em 0.75em; margin-bottom: 0.5em; border: 1px solid #ccc; background: #fff; cursor: pointer; text-align: left; font-size: 0.95rem; }}
+        .tab-button.active {{ background: #e6f7ff; border-color: #91d5ff; }}
+        .tab-content {{ display: none; width: 100%; height: 100%; }}
+        .tab-content.active {{ display: block; }}
+        .sidebar-section {{ margin-top: 1em; }}
+        .sidebar-note {{ font-size: 0.95rem; line-height: 1.5; color: #333; }}
     </style>
 </head>
 <body>
 
 <div class="layout">
   <div class="sidebar">
-    <label for="provinciaSelect"><b>Filtrar por provincia:</b></label><br>
-    <select id="provinciaSelect" style="width: 100%; margin-top: 0.5em;">
-        <option value="Todas">Todas</option>
-        {opciones_provincia}
-    </select>
+    <button id="tabMapa" class="tab-button active">Mapa</button>
+    <button id="tabGrafica" class="tab-button">Gráficas</button>
+
+    <div id="sidebarMapOptions" class="sidebar-section">
+      <label for="provinciaSelect"><b>Filtrar por provincia:</b></label><br>
+      <select id="provinciaSelect" style="width: 100%; margin-top: 0.5em;">
+          <option value="Todas">Todas</option>
+          {opciones_provincia}
+      </select>
+    </div>
+
+    <div id="sidebarReportInfo" class="sidebar-section" style="display: none;">
+      <div class="sidebar-note">
+        Aquí se mostrará el informe publicado de Power BI.<br>
+        Publica tu `.pbix` en Power BI Service y pega la URL de embebido.
+      </div>
+    </div>
   </div>
   <div class="main">
-    <iframe id="iframe_actuales" style="width:100%; height:100%; border:none;"></iframe>
+    <div id="mapContent" class="tab-content active">
+      <iframe id="iframe_actuales" style="width:100%; height:100%; border:none;"></iframe>
+    </div>
+    <div id="reportContent" class="tab-content">
+      <iframe id="iframe_report" style="width:100%; height:100%; border:none;" title="Informe Power BI"></iframe>
+    </div>
   </div>
 </div>
 
 <script>
     const iframeActuales = document.getElementById("iframe_actuales");
+    const iframeReport = document.getElementById("iframe_report");
+    const reportUrl = 'https://app.powerbi.com/view?r=eyJrIjoiZTJhOTM2NGUtOTQwMi00NTRlLWFhMGMtZGZkNTZmOTNiYjhlIiwidCI6ImNlYTFlYTNlLTYwYjItNGY3NS1hNmMyLWE2MDIyZThmOTYxYiIsImMiOjh9';
+
     iframeActuales.src = "/mapa_actuales.html?ts=" + Date.now();
+    iframeReport.src = reportUrl;
+
+    const tabMapa = document.getElementById("tabMapa");
+    const tabGrafica = document.getElementById("tabGrafica");
+    const mapContent = document.getElementById("mapContent");
+    const reportContent = document.getElementById("reportContent");
+    const sidebarMapOptions = document.getElementById("sidebarMapOptions");
+    const sidebarReportInfo = document.getElementById("sidebarReportInfo");
+
+    const activateTab = (tab) => {{
+        const isMap = tab === "map";
+        tabMapa.classList.toggle("active", isMap);
+        tabGrafica.classList.toggle("active", !isMap);
+        mapContent.classList.toggle("active", isMap);
+        reportContent.classList.toggle("active", !isMap);
+        sidebarMapOptions.style.display = isMap ? "block" : "none";
+        sidebarReportInfo.style.display = isMap ? "none" : "block";
+    }};
+
+    tabMapa.addEventListener("click", () => activateTab("map"));
+    tabGrafica.addEventListener("click", () => activateTab("report"));
 
     const coordenadas_provincias = {{
     "A CORUÑA": [43.3623, -8.4115],
