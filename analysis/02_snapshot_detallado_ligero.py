@@ -65,6 +65,8 @@ def main():
         "locality",
         "latitude",
         "longitude",
+        "start_time_fecha",
+        "start_time_hora",
     ]
 
     keep_columns = [col for col in keep_columns if col in df.columns]
