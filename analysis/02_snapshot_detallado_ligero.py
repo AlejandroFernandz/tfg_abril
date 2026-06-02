@@ -65,6 +65,10 @@ def main():
         "locality",
         "latitude",
         "longitude",
+        "latitude_ini",
+        "longitude_ini",
+        "latitude_fin",
+        "longitude_fin",
         "start_time_fecha",
         "start_time_hora",
     ]
