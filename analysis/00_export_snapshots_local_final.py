@@ -9,7 +9,6 @@ import glob
 import sys
 import pandas as pd
 
-# Añadir el directorio padre al path para poder importar data_analisis desde analysis/
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # tqdm opcional: si no lo tienes, funciona igual sin barra
@@ -18,7 +17,7 @@ try:
 except ImportError:
     tqdm = None
 
-from data_analisis.parser_antiguo import parse_datex_historico_enriquecido
+from analysis.parser_antiguo import parse_datex_historico_enriquecido
 
 
 def normalizar_texto(valor):
