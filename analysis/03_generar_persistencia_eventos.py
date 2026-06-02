@@ -21,6 +21,10 @@ def main():
         "locality",
         "latitude",
         "longitude",
+        "latitude_ini",
+        "longitude_ini",
+        "latitude_fin",
+        "longitude_fin",
     ]
 
     df = pd.read_csv(INPUT_CSV, usecols=lambda c: c in usecols)
@@ -63,6 +67,10 @@ def main():
             locality=("locality", "first"),
             latitude=("latitude", "first"),
             longitude=("longitude", "first"),
+            latitude_ini=("latitude_ini", "first"),
+            longitude_ini=("longitude_ini", "first"),
+            latitude_fin=("latitude_fin", "first"),
+            longitude_fin=("longitude_fin", "first"),
         )
     )
 
