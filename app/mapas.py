@@ -346,10 +346,7 @@ def update_map():
     </div>
 
     <div id="sidebarReportInfo" class="sidebar-section" style="display: none;">
-      <div class="sidebar-note">
-        Aquí se mostrará el informe publicado de Power BI.<br>
-        Publica tu `.pbix` en Power BI Service y pega la URL de embebido.
-      </div>
+
     </div>
   </div>
   <div class="main">
@@ -365,7 +362,7 @@ def update_map():
 <script>
     const iframeActuales = document.getElementById("iframe_actuales");
     const iframeReport = document.getElementById("iframe_report");
-    const reportUrl = 'https://app.powerbi.com/view?r=eyJrIjoiZTJhOTM2NGUtOTQwMi00NTRlLWFhMGMtZGZkNTZmOTNiYjhlIiwidCI6ImNlYTFlYTNlLTYwYjItNGY3NS1hNmMyLWE2MDIyZThmOTYxYiIsImMiOjh9';
+    const reportUrl = 'https://app.powerbi.com/view?r=eyJrIjoiOWVhZWUyZDQtMzgwYy00MGFiLTg2MzgtZTU0ZWQ2MGRmMmQ0IiwidCI6ImNlYTFlYTNlLTYwYjItNGY3NS1hNmMyLWE2MDIyZThmOTYxYiIsImMiOjh9&pageName=1a8004df269ae39b23d6';
 
     iframeActuales.src = "/mapa_actuales.html?ts=" + Date.now();
     iframeReport.src = reportUrl;
@@ -460,9 +457,10 @@ def update_map():
         intentarZoom();
     }});
 
-    setTimeout(() => {{
-        location.reload();
-    }}, 300000);
+    // Recargar solo el iframe del mapa cada 2 minutos (sin tocar la página completa)
+    setInterval(() => {{
+        iframeActuales.src = "/mapa_actuales.html?ts=" + Date.now();
+    }}, 120000);
 </script>
 
 </body>

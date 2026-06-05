@@ -36,7 +36,6 @@ def home():
     <head>
         <meta charset="utf-8">
         <title>Mapa de Tráfico en Tiempo Real</title>
-        <meta http-equiv="refresh" content="300"> <!-- recarga cada 5 min -->
     </head>
     <body style="margin:0">
         <iframe src="/mapa" width="100%" height="100%" style="border:none;"></iframe>
