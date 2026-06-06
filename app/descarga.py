@@ -1,4 +1,4 @@
-# Funciones para leer y descargar los datos de las fuentes de datos
+# Funciones para leer y descargar los datos de las fuentes de datos de la dgt
 import requests
 
 # Función para descargar los eventos del tráfico
@@ -21,6 +21,3 @@ def download_radares(file_path="data/radares.xml"):
     else:
         print("Error al descargar el archivo XML")
 
-
-# download_trafico
-# download_radares()

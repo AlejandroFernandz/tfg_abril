@@ -22,7 +22,7 @@ def icono_por_tipo(cause_type: str):
 
     icon_map = {
         # Accidentes
-        "accident": ("car-crash", "red"),  # si no te funciona, usa "car-crash"
+        "accident": ("car-crash", "red"),
 
         # Meteorología / ambiente
         "poorEnvironment": ("cloud-showers-heavy", "cadetblue"),
@@ -37,13 +37,13 @@ def icono_por_tipo(cause_type: str):
         # Mantenimiento / obras
         "roadMaintenance": ("tools", "gray"),
 
-        # Gestión de carril/carretera (desvíos, cierres, etc.)
+        # Gestión de carril/carretera
         "roadOrCarriagewayOrLaneManagement": ("route", "darkblue"),
 
         # Vehículo obstaculizando
         "vehicleObstruction": ("car-side", "darkpurple"),
 
-        # Trafico anómalo - Metido por mi
+        # Trafico anómalo
         "abnormalTraffic": ("car-side", "darkred"),
     }
 
@@ -106,7 +106,7 @@ coordenadas_provincias = {
     "Todas": [40.4168, -3.7038]
 }
 
-# Funcion para generar el segmento entre los popups de eventos y radares de tramo
+# Funcion para generar el segmento entre los popups de tramo
 def add_segment_line_js(base_map, max_km=50):
     map_var = base_map.get_name()
     js = f"""
@@ -185,5 +185,4 @@ def add_segment_line_js(base_map, max_km=50):
       bindWhenReady();
     }})();
     """
-    # OJO: aquí NO ponemos <script>...</script>
     base_map.get_root().script.add_child(folium.Element(js))

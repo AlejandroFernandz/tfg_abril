@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import pandas as pd
 
 # 10/01 traducciones nuevas sobre actualizacion del dataset, y nuevo formato implementado categoria: subcategoria
-# --- Traducciones y jerarquía de tipos (DGT profile v3.6) ---
+# --- Traducciones y jerarquía de tipos para el nuevo formato(DGT profile v3.6) ---
 
 # Subtitulos de eventos traducidos
 CAT_EVENT_TYPE = {
@@ -132,7 +132,7 @@ def parse_datex(file_path="trafico.xml"):
     tree = ET.parse(file_path)
     root = tree.getroot()
 
-    # Namespaces NUEVOS (según tu root)
+    # Namespaces NUEVOS implementados por la dgt
     ns = {
         "sit": "http://levelC/schema/3/situation",
         "com": "http://levelC/schema/3/common",
@@ -143,7 +143,6 @@ def parse_datex(file_path="trafico.xml"):
 
     events = []
 
-    # Ahora sí debería encontrar situationRecord
     for situation in root.findall(".//sit:situationRecord", namespaces=ns):
         record_id = situation.get("id")
 
@@ -184,7 +183,6 @@ def parse_datex(file_path="trafico.xml"):
         severity_el = situation.find("sit:severity", namespaces=ns)
         severity = severity_el.text if severity_el is not None else None
 
-        # Start time (igual, pero ojo: viene con offset +01/+02)
         start_time_el = situation.find(".//com:validityTimeSpecification/com:overallStartTime", namespaces=ns)
         if start_time_el is not None and start_time_el.text:
             start_time_str = start_time_el.text.strip()
@@ -194,30 +192,30 @@ def parse_datex(file_path="trafico.xml"):
             formatted_time = "Fecha de inicio desconocida"
             start_time_obj = None
 
-        # Carril usado: en tu ejemplo está dentro de supplementaryPositionalDescription/carriageway/lane/laneUsage
+        # Carril usado
         carril_el = situation.find(".//loc:lane/loc:laneUsage", namespaces=ns)
         carril_usado = carril_el.text if carril_el is not None else "Carril original"
 
-        # Carretera: en el XML nuevo está como loc:roadInformation/loc:roadName
+        # Nombre carretera
         road_el = situation.find(".//loc:roadInformation/loc:roadName", namespaces=ns)
         road = road_el.text if road_el is not None else "Desconocido"
 
-        # Provincia: ahora viene en la extensión española, por ejemplo lse:province dentro de extendedTpegNonJunctionPoint
+        # Provincia
         prov_el = situation.find(".//lse:province", namespaces=ns)
         provincia = prov_el.text if prov_el is not None else "Desconocida"
 
-        # Kilómetros: ahora vienen como lse:kilometerPoint (en tu ejemplo)
+        # Kms
         km_from_el = situation.find(".//loc:from//lse:kilometerPoint", namespaces=ns)
         km_to_el   = situation.find(".//loc:to//lse:kilometerPoint", namespaces=ns)
 
         kilometro_ini = float(km_from_el.text) if (km_from_el is not None and km_from_el.text) else None
         kilometro_fin = float(km_to_el.text)   if (km_to_el is not None and km_to_el.text) else None
 
-        # Sentido: ahora lo tienes como lse:tpegDirectionRoad
+        # Sentido
         sentido_el = situation.find(".//lse:tpegDirectionRoad", namespaces=ns)
         sentido_kilometracion_ini = sentido_el.text if sentido_el is not None else None
 
-        # Traducciones (las tuyas)
+        # Traducciones para mostrar en el popup, etc
         traducciones_severity = {"low": "Baja", "medium": "Media", "high": "Alta", "highest": "Muy alta"}
         traducciones_probabilidad = {"riskOf": "posible riesgo", "certain": "confirmado", "probable": "probable"}
 
@@ -243,7 +241,7 @@ def parse_datex(file_path="trafico.xml"):
         probability = traducciones_probabilidad.get(probability, "desconocida")
         severity = traducciones_severity.get(severity, "desconocida")
 
-        # LocationReference: en tu XML es sit:locationReference con tpegLinearLocation y from/to
+        # LocationReference
         for location_ref in situation.findall(".//sit:locationReference", namespaces=ns):
 
             # Municipality para tramo (INI y FIN) y para punto fijo 22-01
@@ -272,10 +270,8 @@ def parse_datex(file_path="trafico.xml"):
                         "start_time": formatted_time,
                         "type": event_title,      # 16/01
                         "type_code": event_type_code,  # 10/01 esto se guarda para posibles filtros internos y para los iconos, no se muestra en el popup
-                        # "cause_type": cçause_type, # 16/01 # 22-01
-                        # "cause_detail": cause_detail, #16/01 # 22-01
                         "icon_code": icon_code, # Para meter el icono del causeType 16/01
-                        "type_record_code": event_type_code,      # el xsi:type original (opcional pero útil)
+                        "type_record_code": event_type_code,      # el xsi:type original
                         "cause_type": cause_type_trad,          # lo que se muestra en popup
                         "cause_type_raw": cause_type_raw,       # para iconos / lógica interna
                         "cause_detail": cause_detail_trad,      # lo que se muestra # 22-01
@@ -299,8 +295,8 @@ def parse_datex(file_path="trafico.xml"):
                     })
                 continue # 10/01 para que no duplique si hay from/to, y salgan popups duplicados
 
-            # (Opcional) Evento punto fijo: si en algún caso aparece loc:pointCoordinates suelto
-            point_coords = location_ref.find(".//loc:tpegPointLocation//loc:pointCoordinates", namespaces=ns) # Cambio de la ruta, añadiendo tpegPointLocation para que sea mas específico
+            # Evento punto fijo: si en algún caso aparece loc:pointCoordinates suelto
+            point_coords = location_ref.find(".//loc:tpegPointLocation//loc:pointCoordinates", namespaces=ns) 
             # Kilómetro para evento punto fijo (ruta del XML de PointLocation)
 
 
@@ -319,7 +315,6 @@ def parse_datex(file_path="trafico.xml"):
                         "start_time": formatted_time,
                         "type": event_title,      # 10/01 esto es lo que se mostrará en el popup
                         "type_code": event_type_code,  # 10/01 esto se guarda para posibles filtros internos y para los iconos, no se muestra en el popup
-                        # "cause_type": cause_type, # 10/01 opcional por si se depura
                         "cause_type": cause_type_trad,          # lo que se muestra en popup
                         "cause_type_raw": cause_type_raw,       # para iconos / lógica interna
                         "cause_detail": cause_detail_trad,   # subtítulo (detailedCauseType/*Type) # 22-01
@@ -370,13 +365,10 @@ def parse_radares(file_path="radares.xml"):
         
         provincia = predefined_location.find(".//_0:administrativeArea/_0:value", namespaces=ns)
         provincia = provincia.text if provincia is not None else "Desconocida"
-        # Nombre detallado del radar (si existe) - p.ej. "AS PIAS"
-        # loc_name_el = predefined_location.find(".//_0:predefinedLocationName/_0:value", namespaces=ns)
-        # location_name = loc_name_el.text.strip() if (loc_name_el is not None and loc_name_el.text) else None
         loc_name_el = predefined_location.find(".//_0:predefinedLocationName/_0:value", namespaces=ns)
         location_name = loc_name_el.text.strip() if (loc_name_el is not None and loc_name_el.text) else None
 
-        # ❌ Filtrar nombres "técnicos" tipo CVM_..., CABINACINEMOMETRO_..., GUID_...
+        #  Filtrar nombres "técnicos" tipo CVM_, CABINACINEMOMETRO_, GUID_
         if location_name:
             up = location_name.strip().upper()
             if (
@@ -397,7 +389,7 @@ def parse_radares(file_path="radares.xml"):
         else:
             sentido_kilometracion = "Creciente de la km"
         
-        # En el caso de que el radar sea de cabina (solo un par de coordenadas, un punto en el mapa)
+        # En el caso de que el radar sea de cabina (un punto en el mapa)
         location_point = predefined_location.find(".//_0:point/_0:pointCoordinates", namespaces=ns)
         if location_point is not None:
             latitude = location_point.find("_0:latitude", namespaces=ns)
@@ -414,7 +406,7 @@ def parse_radares(file_path="radares.xml"):
                     "kilometro": float(kilometro)*1/1000,
                     "sentido_kilometracion": sentido_kilometracion
                 })
-        # En el caso de que sea un radar de tramo, y que por lo tanto haya un par de coordenadas:
+        # En el caso de que sea un radar de tramo, y que por lo tanto haya dos pares de coordenadas:
         location_ini = predefined_location.find(".//_0:from/_0:pointCoordinates", namespaces=ns)
         location_fin = predefined_location.find(".//_0:to/_0:pointCoordinates", namespaces=ns)
         

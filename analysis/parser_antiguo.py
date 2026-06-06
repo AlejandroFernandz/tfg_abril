@@ -1,3 +1,4 @@
+# Mantengo el parser que tenía al inicio del proyecto, porque se actualizó el formato en el que la DGT publicaba los datos
 import os
 import re
 import xml.etree.ElementTree as ET

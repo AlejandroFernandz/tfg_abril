@@ -36,9 +36,8 @@ def _parse_iso_to_utc(dt_str):
     if not dt_str:
         return None
     try:
-        dt = datetime.fromisoformat(dt_str)  # suele venir aware por el +02:00
+        dt = datetime.fromisoformat(dt_str) 
         if dt.tzinfo is None:
-            # por si algún día viniera sin tz: asumimos Madrid
             dt = dt.replace(tzinfo=ZoneInfo("Europe/Madrid"))
         return dt.astimezone(ZoneInfo("UTC"))
     except Exception:
@@ -47,9 +46,8 @@ def _parse_iso_to_utc(dt_str):
 SPAIN_TZ = ZoneInfo("Europe/Madrid")
 def infer_snapshot_datetime_from_filename(path: str):
     """
-    Nombre: dgt_YYYYMMDD_HHMMSS.xml  -> snapshot local Europe/Madrid
     Ej: dgt_20250313_120145.xml => 2025-03-13 12:01:45 (Madrid)
-    Devuelve datetime timezone-aware en UTC (recomendado para BI)
+    Devuelve datetime timezone-aware en UTC
     """
     name = os.path.basename(path)
 
@@ -76,14 +74,9 @@ def _extract_type_tag_value(situation_record):
     """
     Busca el 'subtipo' según el record_xsi_type:
     p.ej. ConstructionWorks -> sit:constructionWorkType
-         GeneralObstruction -> sit:obstructionType
-         EnvironmentalObstruction -> sit:environmentalObstructionType
-         PoorEnvironmentConditions -> sit:poorEnvironmentType
-         AbnormalTraffic -> sit:abnormalTrafficType
          ...
     Devuelve (type_tag, type_value) o (None, None)
     """
-    # preferimos: primer hijo tag que acabe en "Type" y tenga texto
     for child in list(situation_record):
         tag = child.tag.split("}")[-1]  # sin namespace
         if tag.endswith("Type"):
@@ -140,10 +133,10 @@ def parse_datex_historico_enriquecido(file_path: str) -> pd.DataFrame:
 
         type_tag, type_value = _extract_type_tag_value(record)
 
-        # Puede haber 1..n locationReference por record; tu base debería “explotar” si ocurre.
+        # Puede haber 1..n locationReference por record
         location_refs = record.findall(".//sit:locationReference", NS)
         if not location_refs:
-            # aun así guardamos una fila “sin geometría”
+
             rows.append({
                 "id": record_id,
                 "version": record_version,
@@ -181,7 +174,7 @@ def parse_datex_historico_enriquecido(file_path: str) -> pd.DataFrame:
             continue
 
         for locref in location_refs:
-            # nombre (descriptor)
+            # nombre 
             loc_name = locref.find(".//loc:descriptor/com:values/com:value", NS)
             locality = _txt(loc_name)
 
@@ -275,7 +268,7 @@ def parse_datex_historico_enriquecido(file_path: str) -> pd.DataFrame:
 
     df = pd.DataFrame(rows)
 
-    # Normaliza fechas como datetime (Power BI se lleva mejor esto que strings raros)
+    # Normaliza fechas
     for c in ["publication_time", "snapshot_datetime", "overall_start_time", "record_creation_time", "record_version_time"]:
         if c in df.columns:
             df[c] = pd.to_datetime(df[c], utc=True, errors="coerce")

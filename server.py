@@ -21,11 +21,12 @@ def actualizar_mapa_periodicamente():
     time.sleep(15)  # Espera inicial para evitar colisión al arrancar 30/12
     while True:
         try:
-            print("[🛰️] Actualizando mapa...")
+            print("[LOADING] Actualizando mapa...")
             update_map()
-            print("[✅] Mapa actualizado correctamente.")
+            print("[OK] Mapa actualizado correctamente.")
         except Exception as e:
-            print(f"[❌] Error al actualizar el mapa: {e}")
+            # print(f"[ERROR] Error al actualizar el mapa: {e}")
+            pass
         time.sleep(120)  # 300 = 5 minutos, 120 = 2 minutos
 
 @app.route("/")
@@ -46,38 +47,36 @@ def home():
 @app.route("/mapa")
 def mostrar_mapa():
     """Sirve el HTML del mapa completo."""
-    # return send_from_directory(MAPA_DIR, MAPA_HTML)
     resp = make_response(send_from_directory(MAPA_DIR, MAPA_HTML))
     return nocache(resp)
 
 @app.route("/mapa_actuales.html")
 def mapa_actuales():
-    # return send_from_directory(MAPA_DIR, "mapa_actuales.html")
     resp = make_response(send_from_directory(MAPA_DIR, "mapa_actuales.html"))
     return nocache(resp)
 
 if __name__ == "__main__":
-    print("[🚀] Generando mapa inicial completo...")
+    print("Generando mapa inicial completo...")
 
     try:
         update_map()
-        print("[✅] Mapa actualizado correctamente.")
+        print("[OK] Mapa actualizado correctamente.")
 
     except Exception as e:
-        print(f"[❌] Error en la actualización inicial: {e}")
+        print(f"[ERROR] Error en la actualización inicial: {e}")
         exit(1)
 
-    print("[⏳] Verificando existencia de mapa completo...")
+    print("[LOADING] Verificando existencia de mapa completo...")
     intentos = 0
     while not os.path.exists(os.path.join(MAPA_DIR, MAPA_HTML)):
         time.sleep(1)
         intentos += 1
         if intentos > 60:
-            raise TimeoutError("❌ Timeout: No se generó el mapa completo a tiempo.")
+            raise TimeoutError("Error Timeout: No se generó el mapa completo a tiempo.")
 
-    print("[✅] Mapa completo generado. Iniciando servidor Flask...")
+    print("[OK] Mapa completo generado. Iniciando servidor Flask...")
 
     threading.Thread(target=actualizar_mapa_periodicamente, daemon=True).start()
 
-    print("[🌐] Servidor corriendo en http://127.0.0.1:5000")
+    print("[SERVER OK] Servidor corriendo en http://127.0.0.1:5000")
     app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)

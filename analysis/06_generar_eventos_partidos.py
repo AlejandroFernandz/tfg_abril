@@ -1,10 +1,11 @@
+# Csv final para el analisis de trafico y partidos de futbol
 import os
 import pandas as pd
 
 INPUT_EVENTOS_CERCANOS = "analysis/datasets_generados/05_eventos_cercanos_estadios.csv"
 INPUT_PARTIDOS = "analysis/datasets_generados/04_partidos_estadios_filtrados.csv"
 OUTPUT_CSV = "analysis/datasets_generados/06_eventos_partidos_v2.csv"
-
+# Variables para filtros
 HORAS_PRE = 3
 DURACION_PARTIDO_HORAS = 2
 HORAS_POST = 3
@@ -156,10 +157,10 @@ def main():
         "duracion_oficial_horas",
         "duracion_observada_horas",
         "num_snapshots_activo",
-        "latitud_evento",      # Nueva columna unificada
-        "longitud_evento",     # Nueva columna unificada
-        "latitud_estadio",     # Nueva columna unificada
-        "longitud_estadio",    # Nueva columna unificada
+        "latitud_evento",      
+        "longitud_evento",     
+        "latitud_estadio",     
+        "longitud_estadio",    
         "latitude_fin",        
         "longitude_fin",
         "horas_pre",
