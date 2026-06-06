@@ -11,7 +11,6 @@ import pandas as pd
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-# tqdm opcional: si no lo tienes, funciona igual sin barra
 try:
     from tqdm import tqdm
 except ImportError:
@@ -108,7 +107,7 @@ def main():
         errors="coerce",
     )
 
-    # Seleccionar solo las columnas que quieres exportar
+    # Columnas que se exportan al csv
     keep_columns = [
         "snapshot_datetime",
         "publication_time",

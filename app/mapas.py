@@ -1,3 +1,4 @@
+# Generar los mapas y sus funcionalidades
 import folium
 import os
 from folium.plugins import FeatureGroupSubGroup, MarkerCluster
@@ -8,7 +9,7 @@ from app.parsing import *
 import schedule
 import time
 
-# Funcion para que se siga cargando el mapa hasta que se muestre algo (nunca será necesario refrescar manualmente)
+# Funcion para que se siga cargando el mapa hasta que se muestre algo
 def save_atomic(m, output_file):
     tmp = output_file + ".tmp"
     m.save(tmp)
@@ -28,7 +29,6 @@ def expose_leaflet_map(base_map):
         bind();
     }})();
     """
-    # OJO: aquí NO ponemos <script>...</script>
     base_map.get_root().script.add_child(folium.Element(js))
 
 # Función para crear el mapa combinado
@@ -285,15 +285,15 @@ def update_map():
     from datetime import datetime, timezone
     import os
 
-    # 1. Descargar datos
+    # Descarga de los datos fuente
     download_trafico("data/trafico.xml")
     download_radares("data/radares.xml")
 
-    # 2. Parsear datos
+    # Parseo de los datos
     eventos_df = parse_datex("data/trafico.xml")
     radares_df = parse_radares("data/radares.xml")
 
-    # 3. Provincias únicas. Son los nombres que saldran en los desplegables
+    # Provincias que saldrán en el desplegable
     provincias = [
     "A Coruña", "Albacete", "Alicante", "Almería", "Ávila", "Badajoz", "Barcelona", "Bilbao",
     "Cádiz", "Castellón", "Ciudad Real", "Córdoba", "Cuenca", "Girona", "Granada", "Guadalajara",
@@ -304,14 +304,14 @@ def update_map():
     ]
     opciones_provincia = "<br>".join([f'<option value="{prov}">{prov}</option>' for prov in provincias])    
 
-    # 4. Filtrar eventos actuales en base a la hora de inicio del evento
+    # Filtrar eventos actuales
     now = datetime.now(timezone.utc)
     eventos_actuales = eventos_df[eventos_df["start_time_obj"] <= now]
 
-    # 5. Generar el mapa actual
+    # Generar el mapa
     create_actuales_map(eventos_actuales, radares_df, "mapas_generados/mapa_actuales.html")
 
-    # 6. Crear HTML principal embebiendo el iframe
+    # Crear el HTML principal embebiendo el iframe
     html_con_tabs = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -457,7 +457,7 @@ def update_map():
         intentarZoom();
     }});
 
-    // Recargar solo el iframe del mapa cada 2 minutos (sin tocar la página completa)
+    // Recargar solo el iframe del mapa cada 2 minutos (sin tocar la página completa para que no se reinicien las graficas)
     setInterval(() => {{
         iframeActuales.src = "/mapa_actuales.html?ts=" + Date.now();
     }}, 120000);
@@ -467,7 +467,7 @@ def update_map():
 </html>"""
 
     
-    # 8. Escribir de forma atómica para evitar corrupción
+    # Escribir de forma atómica para evitar corrupción
     temp_path = "mapas_generados/mapa_completo.tmp.html"
     final_path = "mapas_generados/mapa_completo.html"
 
@@ -476,4 +476,4 @@ def update_map():
 
     os.replace(temp_path, final_path)
 
-    print("[✅] Mapa principal generado en: mapas_generados/mapa_completo.html")
+    print("[OK] Mapa principal generado en: mapas_generados/mapa_completo.html")

@@ -1,5 +1,4 @@
 # Genera un csv para usar segmentadores/filtros en pbi
-# cause_type, cause_detail, probability, severity, road, provincia, hora, dia_semana
 
 import os
 import pandas as pd

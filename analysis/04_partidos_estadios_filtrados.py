@@ -69,14 +69,14 @@ def main():
         
     ]
     
-    # 3. Convertir la lista manual a un DataFrame de Pandas
+    # Convertir la lista manual a un DataFrame de Pandas
     champions_df = pd.DataFrame(partidos_champions_datos)
     
-    # 4. Concatenar TODO (Liga + Champions) en un único DataFrame
+    # Concatenar todos los datos
     partidos = pd.concat([sp1, sp2, champions_df], ignore_index=True) 
 
     # Convertir la columna Time a formato timedelta, sumar 1 hora y volver a formatear como HH:MM para que las horas coincidan con las de trafico
-    # Los partidos no vienen en hora local española porque la pagina es extranjera
+    # Los partidos no vienen en hora local española porque la fuente es extranjera
     partidos['Time'] = pd.to_timedelta(partidos['Time'] + ':00') + pd.Timedelta(hours=1)
     partidos['Time'] = partidos['Time'].dt.components.apply(lambda x: f"{x.hours:02d}:{x.minutes:02d}", axis=1)
 
@@ -126,7 +126,7 @@ def main():
         "Real Madrid": "Santiago Bernabeu",
         "Ath Madrid": "Metropolitano",
         "Girona": "Montilivi",
-        "Tottenham": "San Mames", # La final de la Europa League se jugó en San Mames (para que lo guarde)
+        "Tottenham": "San Mames", # La final de la Europa League se jugó en San Mames (para que lo guarde se le asigna ese estadio)
 
         # Segunda
         "Granada": "Los Carmenes",

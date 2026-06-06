@@ -1,4 +1,4 @@
-# Cada fila que genera este csv es un evento de trafico situado a 3 kms o menos de un estadio de futbol en el que hay un partido
+# Cada fila que genera este csv es un evento de trafico situado a 1.5 kms o menos de un estadio de futbol en el que hay un partido
 import math
 import os
 import pandas as pd
@@ -53,7 +53,7 @@ def main():
     )
     partidos = pd.read_csv(INPUT_PARTIDOS)
 
-    # Se corrige la validación usando los nombres reales del archivo 04
+    # Se corrige la validación usando los nombres reales del archivo 04 (unificar longitud, latitud y las mismas para incidencias de tramo)
     required_partidos = ["Estadio", "Latitud_Estadio", "Longitud_Estadio"]
     missing_partidos = [
         c for c in required_partidos if c not in partidos.columns
@@ -71,7 +71,7 @@ def main():
     partidos["Latitud_Estadio"] = pd.to_numeric(partidos["Latitud_Estadio"], errors="coerce")
     partidos["Longitud_Estadio"] = pd.to_numeric(partidos["Longitud_Estadio"], errors="coerce")
 
-    # UNIFICACIÓN: Creamos las nuevas columnas 'latitud_evento' y 'longitud_evento'
+    # Unificacion
     lat_ini = eventos["latitude_ini"] if "latitude_ini" in eventos.columns else pd.Series(dtype='float64')
     lon_ini = eventos["longitude_ini"] if "longitude_ini" in eventos.columns else pd.Series(dtype='float64')
 
@@ -86,7 +86,7 @@ def main():
     columnas_a_borrar = ["latitude", "longitude", "latitude_ini", "longitude_ini"]
     eventos = eventos.drop(columns=columnas_a_borrar, errors="ignore")
 
-    # Estadios únicos usando las columnas corregidas
+    # Estadios únicos usando las columnas unificadas
     estadios = (
         partidos[["Estadio", "Latitud_Estadio", "Longitud_Estadio"]]
         .drop_duplicates()
