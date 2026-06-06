@@ -17,7 +17,7 @@ def nocache(resp):
     return resp
 
 def actualizar_mapa_periodicamente():
-    """Actualiza el mapa cada 5 minutos."""
+    """Actualiza el mapa cada 2 minutos."""
     time.sleep(15)  # Espera inicial para evitar colisión al arrancar 30/12
     while True:
         try:
@@ -25,9 +25,8 @@ def actualizar_mapa_periodicamente():
             update_map()
             print("[OK] Mapa actualizado correctamente.")
         except Exception as e:
-            # print(f"[ERROR] Error al actualizar el mapa: {e}")
             pass
-        time.sleep(120)  # 300 = 5 minutos, 120 = 2 minutos
+        time.sleep(120)  # 2 miuntos
 
 @app.route("/")
 def home():
