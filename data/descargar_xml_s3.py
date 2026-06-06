@@ -1,14 +1,13 @@
+# Descarga los XML que estan almacenados en el bucket de S3 a una carpeta en local
 import boto3
 import os
 
-# ================== CONFIGURACIÓN ==================
 
-AWS_REGION = "eu-north-1"   # cámbiala si tu bucket está en otra región
+AWS_REGION = "eu-north-1" 
 
 BUCKET_NAME = "datos-dgt"
-PREFIX = ""                # ej: "carpeta/xml/"
+PREFIX = ""                
 DESTINO_LOCAL = "data/xml_descargados"
-# REDACTED_AWS_SECRET_ACCESS_KEY===========
 
 os.makedirs(DESTINO_LOCAL, exist_ok=True)
 
@@ -35,4 +34,4 @@ for page in paginator.paginate(Bucket=BUCKET_NAME, Prefix=PREFIX):
             print(f"Descargando {key}")
             s3.download_file(BUCKET_NAME, key, ruta_local)
 
-print("✔ Descarga completada")
+print("Descarga completada")

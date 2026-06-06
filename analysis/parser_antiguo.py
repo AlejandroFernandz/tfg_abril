@@ -5,10 +5,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 import pandas as pd
 
-
-# =========================
-# Traducciones (ajusta/une a las tuyas si ya las tienes en app/parsing.py)
-# =========================
+# Traducciones
 
 TRAD_CAUSE_TYPE = {
     "abnormalTraffic": "Tráfico anómalo",
@@ -51,7 +48,6 @@ TRAD_CAUSE_DETAIL = {
     "narrowLanes": "Carriles estrechos",
     "intermittentShortTermClosures": "Cierres intermitentes",
     "doNotUseSpecifiedLanesOrCarriageways": "No usar carriles especificados",
-    "REDACTED_AWS_SECRET_ACCESS_KEY": "Uso permitido carriles especificados",
     "weightRestrictionInOperation": "Restricción de peso",
     "contraflow": "Sentido contrario habilitado",
     "tidalFlowLaneInOperation": "Carril reversible activo",
@@ -76,9 +72,7 @@ TRAD_CAUSE_DETAIL = {
 }
 
 
-# =========================
-# Helpers
-# =========================
+# Algunos helpers
 
 def _text(el):
     return el.text.strip() if (el is not None and el.text and el.text.strip()) else None
@@ -206,10 +200,7 @@ def _extract_cause_old(situation, ns):
 
     return cause_type_raw, cause_detail_raw
 
-
-# =========================
-# Parser principal
-# =========================
+# Funcion para parsear con el formato antiguo
 
 def parse_datex_historico_enriquecido(file_path: str) -> pd.DataFrame:
     """
