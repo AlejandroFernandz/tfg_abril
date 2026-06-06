@@ -346,6 +346,15 @@ def update_map():
     </div>
 
     <div id="sidebarReportInfo" class="sidebar-section" style="display: none;">
+        <div class="sidebar-note">
+            <ol>
+                <li>Resumen temporal general</li>
+                <li>Patrones horarios</li>
+                <li>Persistencia de incidencias</li>
+                <li>Impacto geográfico</li>
+                <li>Incidencias y fútbol</li>
+            </ol>
+        </div>
 
     </div>
   </div>
