@@ -180,8 +180,12 @@ def parse_datex(file_path="trafico.xml"):
         probability_el = situation.find("sit:probabilityOfOccurrence", namespaces=ns)
         probability = probability_el.text if probability_el is not None else None
 
-        severity_el = situation.find("sit:severity", namespaces=ns)
-        severity = severity_el.text if severity_el is not None else None
+        severity_el = situation.find(".//sit:severity", namespaces=ns)
+
+        if severity_el is not None and severity_el.text:
+            severity = severity_el.text.strip()
+        else:
+            severity = None
 
         start_time_el = situation.find(".//com:validityTimeSpecification/com:overallStartTime", namespaces=ns)
         if start_time_el is not None and start_time_el.text:
