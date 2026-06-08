@@ -1,20 +1,24 @@
 # Generar los mapas y sus funcionalidades
-import folium
 import os
-from folium.plugins import FeatureGroupSubGroup, MarkerCluster
-import pandas as pd
-from app.utilidades import icono_por_tipo, safe_replace, add_segment_line_js
-from app.descarga import *
-from app.parsing import *
-import schedule
-import time
+from datetime import datetime, timezone
 
-# Funcion para que se siga cargando el mapa hasta que se muestre algo
+import folium
+import pandas as pd
+from folium.plugins import MarkerCluster
+
+from app.utilidades import icono_por_tipo, add_segment_line_js
+from app.descarga import download_trafico, download_radares
+from app.parsing import parse_datex, parse_radares
+
+
+# Guarda el html cuando acabe por si está recargdando
 def save_atomic(m, output_file):
     tmp = output_file + ".tmp"
     m.save(tmp)
     os.replace(tmp, output_file)
 
+
+# Mete el mapa al html padre para poder hazer los zooms
 def expose_leaflet_map(base_map):
     map_var = base_map.get_name()
     js = f"""
@@ -31,7 +35,116 @@ def expose_leaflet_map(base_map):
     """
     base_map.get_root().script.add_child(folium.Element(js))
 
-# Función para crear el mapa combinado
+
+def crear_popup_evento_puntual(event, provincia, lat, lon):
+    return f"""
+    <div data-provincia="{provincia}" data-lat="{lat}" data-lng="{lon}">
+    <div style="font-size:14px; line-height:1.25;">
+        <div style="font-weight:700; font-size:15px;">{event.get('type','Evento')}</div>
+        <div style="font-weight:600;">{event.get('cause_type','')}</div>
+        <div style="font-style:italic; color:#444;">{event.get('cause_detail','')}</div>
+
+        <hr style="margin:8px 0;">
+
+        <div>📍 <b>{event.get('road','')}</b> · Km <b>{event.get('kilometro','')}</b></div>
+        <div>🏙️ {event.get('locality','Desconocido')} ({event.get('provincia','Desconocida')})</div>
+        <div>➡️ Sentido de circulación: {event.get('sentido_kilometracion','Sentido desconocido')}</div>
+        <div>🛣️ Carril afectado: {event.get('carril_usado','')}</div>
+
+        <hr style="margin:8px 0;">
+
+        <div>⚠️ Severidad: <b>{event.get('severity','desconocida')}</b> · Prob.: <b>{event.get('probability','desconocida')}</b></div>
+        <div>🕒 Inicio: {event.get('start_time','Fecha desconocida')}</div>
+
+        <div style="margin-top:6px; font-size:12px; color:#666;">ID: {event.get('id','')}</div>
+    </div>
+    </div>
+    """
+
+
+def crear_popup_evento_tramo(event, provincia, seg_id, lat, lon, lat_ini, lon_ini, lat_fin, lon_fin):
+    return f"""
+    <div data-seg="{seg_id}"
+        data-lat-ini="{lat_ini}" data-lng-ini="{lon_ini}"
+        data-lat-fin="{lat_fin}" data-lng-fin="{lon_fin}"
+        data-provincia="{provincia}" data-lat="{lat}" data-lng="{lon}">
+    <div style="font-size:14px; line-height:1.25;">
+        <div style="font-weight:700; font-size:15px;">{event.get('type','Evento')}</div>
+        <div style="font-weight:600;">{event.get('cause_type','')}</div>
+        <div style="font-style:italic; color:#444;">{event.get('cause_detail','')}</div>
+
+        <hr style="margin:8px 0;">
+
+        <div>🛣️ <b>{event.get('road','')}</b> ({event.get('provincia','Desconocida')})</div>
+        <div>▶️ <b>TRAMO</b>:
+        Km <b>{event.get('kilometro_ini','')}</b> — {event.get('locality_ini','Desconocido')}
+        → Km <b>{event.get('kilometro_fin','')}</b> — {event.get('locality_fin','Desconocido')}
+        </div>
+        <div>➡️ Sentido de circulación: {event.get('sentido_kilometracion','Sentido desconocido')}</div>
+        <div>🛣️ Carril afectado: {event.get('carril_usado','')}</div>
+
+        <hr style="margin:8px 0;">
+
+        <div>⚠️ Severidad: <b>{event.get('severity','desconocida')}</b> · Prob.: <b>{event.get('probability','desconocida')}</b></div>
+        <div>🕒 Inicio: {event.get('start_time','Fecha desconocida')}</div>
+
+        <div style="margin-top:6px; font-size:12px; color:#666;">ID: {event.get('id','')}</div>
+    </div>
+    </div>
+    """
+
+
+def crear_popup_radar_cabina(radar, provincia, lugar):
+    return f"""
+    <div data-provincia="{provincia}">
+    <div style="font-size:14px; line-height:1.25;">
+        <div style="font-weight:700; font-size:15px;">Radar fijo (cabina)</div>
+        <div style="font-weight:600;">Control de velocidad</div>
+        <div style="font-style:italic; color:#444;">Ubicación puntual</div>
+
+        <hr style="margin:8px 0;">
+
+        <div>📍 <b>{radar.get('road','')}</b> · Km <b>{radar.get('kilometro','')}</b></div>
+        <div>🏙️ {lugar} ({radar.get('provincia','Desconocida')})</div>
+        <div>➡️ Sentido de circulación: {radar.get('sentido_kilometracion','Desconocido')}</div>
+
+        <hr style="margin:8px 0;">
+
+        <div style="margin-top:6px; font-size:12px; color:#666;">ID: {radar.get('radar_id_fijo','')}</div>
+    </div>
+    </div>
+    """
+
+
+def crear_popup_radar_tramo(radar, provincia, lugar, label, seg_id, lat, lon, lat_ini_r, lon_ini_r, lat_fin_r, lon_fin_r):
+    return f"""
+    <div data-seg="{seg_id}"
+        data-lat-ini="{lat_ini_r}" data-lng-ini="{lon_ini_r}"
+        data-lat-fin="{lat_fin_r}" data-lng-fin="{lon_fin_r}"
+        data-provincia="{provincia}" data-lat="{lat}" data-lng="{lon}">
+    <div style="font-size:14px; line-height:1.25;">
+        <div style="font-weight:700; font-size:15px;">Radar de tramo — {label}</div>
+        <div style="font-weight:600;">Control de velocidad media</div>
+        <div style="font-style:italic; color:#444;">Tramo controlado (línea en el mapa)</div>
+
+        <hr style="margin:8px 0;">
+
+        <div>📍 <b>{radar.get('road','')}</b> · Km ref. <b>{radar.get('kilometro','')}</b></div>
+        <div>🏙️ {lugar} ({radar.get('provincia','Desconocida')})</div>
+        <div>➡️ Sentido de circulación: {radar.get('sentido_kilometracion','Desconocido')}</div>
+
+        <hr style="margin:8px 0;">
+
+        <div style="font-size:12px; color:#666;">
+        ID INI: {radar.get('radar_id_ini','')}<br>
+        ID FIN: {radar.get('radar_id_fin','')}
+        </div>
+    </div>
+    </div>
+    """
+
+
+# Crear el mapa combinado entre incidencias y radares
 def create_actuales_map(eventos_df, radares_df, output_file="mapa_actuales.html"):
     OFFSET = 0.0001
     added_locations = set()
@@ -39,55 +152,43 @@ def create_actuales_map(eventos_df, radares_df, output_file="mapa_actuales.html"
 
     base_map = folium.Map(location=[40.4168, -3.7038], zoom_start=6)
 
-    cluster_eventos = MarkerCluster(name="Eventos agrupados", maxClusterRadius=50, disableClusteringAtZoom=15).add_to(base_map)
-    cluster_radares = MarkerCluster(name="Radares agrupados", maxClusterRadius=50, disableClusteringAtZoom=15).add_to(base_map)
+    cluster_eventos = MarkerCluster(
+        name="Eventos agrupados",
+        maxClusterRadius=50,
+        disableClusteringAtZoom=15
+    ).add_to(base_map)
 
-    def añadir_eventos(df, fijos_fg, tramos_fg):
+    cluster_radares = MarkerCluster(
+        name="Radares agrupados",
+        maxClusterRadius=50,
+        disableClusteringAtZoom=15
+    ).add_to(base_map)
+
+    def añadir_eventos(df):
         for _, event in df.iterrows():
-            icon_name, icon_color = icono_por_tipo(event.get("cause_type_raw") or "unknown") # 21-01
-
+            icon_name, icon_color = icono_por_tipo(event.get("cause_type_raw") or "unknown")
             provincia = event["provincia"]
 
+            # Eventos con una única coordenada
             if pd.notna(event.get("latitude")) and pd.notna(event.get("longitude")):
                 lat, lon = event["latitude"], event["longitude"]
+
                 while (lat, lon) in added_locations:
                     lat += OFFSET
                     lon += OFFSET
+
                 added_locations.add((lat, lon))
 
-                html_popup = f"""
-                <div data-provincia="{provincia}" data-lat="{lat}" data-lng="{lon}">
-                <div style="font-size:14px; line-height:1.25;">
-                    <div style="font-weight:700; font-size:15px;">{event.get('type','Evento')}</div>
-                    <div style="font-weight:600;">{event.get('cause_type','')}</div>
-                    <div style="font-style:italic; color:#444;">{event.get('cause_detail','')}</div>
-
-                    <hr style="margin:8px 0;">
-
-                    <div>📍 <b>{event.get('road','')}</b> · Km <b>{event.get('kilometro','')}</b></div>
-                    <div>🏙️ {event.get('locality','Desconocido')} ({event.get('provincia','Desconocida')})</div>
-                    <div>➡️ Sentido de circulación: {event.get('sentido_kilometracion','Sentido desconocido')}</div>
-                    <div>🛣️ Carril de circulación: {event.get('carril_usado','')}</div>
-
-                    <hr style="margin:8px 0;">
-
-                    <div>⚠️ Severidad: <b>{event.get('severity','desconocida')}</b> · Prob.: <b>{event.get('probability','desconocida')}</b></div>
-                    <div>🕒 Inicio: {event.get('start_time','Fecha desconocida')}</div>
-
-                    <div style="margin-top:6px; font-size:12px; color:#666;">ID: {event.get('id','')}</div>
-                </div>
-                </div>
-                """
-
-
+                html_popup = crear_popup_evento_puntual(event, provincia, lat, lon)
 
                 folium.Marker(
                     location=[lat, lon],
-                    tooltip= f"{event['type']}<br>{provincia}",
+                    tooltip=f"{event['type']}<br>{provincia}",
                     popup=folium.Popup(html_popup, max_width=300),
                     icon=folium.Icon(color=icon_color, icon=icon_name, prefix="fa")
-                ).add_to(fijos_fg)
+                ).add_to(cluster_eventos)
 
+            # Eventos de tramo (coordendas iniciales y finales de la incidencia)
             if pd.notna(event.get("latitude_ini")) and pd.notna(event.get("longitude_ini")):
                 lat_ini, lon_ini = event["latitude_ini"], event["longitude_ini"]
                 lat_fin, lon_fin = event["latitude_fin"], event["longitude_fin"]
@@ -104,124 +205,57 @@ def create_actuales_map(eventos_df, radares_df, output_file="mapa_actuales.html"
 
                 seg_id = f"event_{event['id']}"
 
+                html_ini = crear_popup_evento_tramo(
+                    event, provincia, seg_id,
+                    lat_ini, lon_ini,
+                    lat_ini, lon_ini,
+                    lat_fin, lon_fin
+                )
 
-                html_ini = f"""
-                <div data-seg="{seg_id}"
-                    data-lat-ini="{lat_ini}" data-lng-ini="{lon_ini}"
-                    data-lat-fin="{lat_fin}" data-lng-fin="{lon_fin}"
-                    data-provincia="{provincia}" data-lat="{lat_ini}" data-lng="{lon_ini}">
-                <div style="font-size:14px; line-height:1.25;">
-                    <div style="font-weight:700; font-size:15px;">{event.get('type','Evento')}</div>
-                    <div style="font-weight:600;">{event.get('cause_type','')}</div>
-                    <div style="font-style:italic; color:#444;">{event.get('cause_detail','')}</div>
-
-                    <hr style="margin:8px 0;">
-
-                    <div>🛣️ <b>{event.get('road','')}</b> ({event.get('provincia','Desconocida')})</div>
-                    <div>▶️ <b>TRAMO</b>:
-                    Km <b>{event.get('kilometro_ini','')}</b> — {event.get('locality_ini','Desconocido')}
-                    → Km <b>{event.get('kilometro_fin','')}</b> — {event.get('locality_fin','Desconocido')}
-                    </div>
-                    <div>➡️ Sentido de circulación: {event.get('sentido_kilometracion','Sentido desconocido')}</div>
-                    <div>🛣️ Carril afectado: {event.get('carril_usado','')}</div>
-
-                    <hr style="margin:8px 0;">
-
-                    <div>⚠️ Severidad: <b>{event.get('severity','desconocida')}</b> · Prob.: <b>{event.get('probability','desconocida')}</b></div>
-                    <div>🕒 Inicio: {event.get('start_time','Fecha desconocida')}</div>
-
-                    <div style="margin-top:6px; font-size:12px; color:#666;">ID: {event.get('id','')}</div>
-                </div>
-                </div>
-                """
-
-                html_fin = f"""
-                <div data-seg="{seg_id}"
-                    data-lat-ini="{lat_ini}" data-lng-ini="{lon_ini}"
-                    data-lat-fin="{lat_fin}" data-lng-fin="{lon_fin}"
-                    data-provincia="{provincia}" data-lat="{lat_fin}" data-lng="{lon_fin}">
-                <div style="font-size:14px; line-height:1.25;">
-                    <div style="font-weight:700; font-size:15px;">{event.get('type','Evento')}</div>
-                    <div style="font-weight:600;">{event.get('cause_type','')}</div>
-                    <div style="font-style:italic; color:#444;">{event.get('cause_detail','')}</div>
-
-                    <hr style="margin:8px 0;">
-
-                    <div>🛣️ <b>{event.get('road','')}</b> ({event.get('provincia','Desconocida')})</div>
-                    <div>▶️ <b>TRAMO</b>:
-                    Km <b>{event.get('kilometro_ini','')}</b> — {event.get('locality_ini','Desconocido')}
-                    → Km <b>{event.get('kilometro_fin','')}</b> — {event.get('locality_fin','Desconocido')}
-                    </div>
-                    <div>➡️ Sentido de circulación: {event.get('sentido_kilometracion','Sentido desconocido')}</div>
-                    <div>🛣️ Carril afectado: {event.get('carril_usado','')}</div>
-
-                    <hr style="margin:8px 0;">
-
-                    <div>⚠️ Severidad: <b>{event.get('severity','desconocida')}</b> · Prob.: <b>{event.get('probability','desconocida')}</b></div>
-                    <div>🕒 Inicio: {event.get('start_time','Fecha desconocida')}</div>
-
-                    <div style="margin-top:6px; font-size:12px; color:#666;">ID: {event.get('id','')}</div>
-                </div>
-                </div>
-                """
-
+                html_fin = crear_popup_evento_tramo(
+                    event, provincia, seg_id,
+                    lat_fin, lon_fin,
+                    lat_ini, lon_ini,
+                    lat_fin, lon_fin
+                )
 
                 folium.Marker(
                     location=[lat_ini, lon_ini],
                     tooltip=f"{event['type']}<br>{provincia}",
                     popup=folium.Popup(html_ini, max_width=300),
                     icon=folium.Icon(color=icon_color, icon=icon_name, prefix="fa")
-                ).add_to(tramos_fg)
+                ).add_to(cluster_eventos)
 
                 folium.Marker(
                     location=[lat_fin, lon_fin],
                     tooltip=f"{event['type']}<br>{provincia}",
                     popup=folium.Popup(html_fin, max_width=300),
                     icon=folium.Icon(color=icon_color, icon=icon_name, prefix="fa")
-                ).add_to(tramos_fg)
+                ).add_to(cluster_eventos)
 
-
-    añadir_eventos(eventos_df, cluster_eventos, cluster_eventos)
+    añadir_eventos(eventos_df)
 
     for _, radar in radares_df.iterrows():
-        icon_color = "red" if radar["type"] == "Cabina" else "orange"
         provincia = radar["provincia"]
+        lugar = radar.get("location_name") or radar.get("provincia", "Desconocida")
 
-
+        # Radar fijo
         if radar["type"] == "Cabina":
-            lugar = radar.get("location_name") or radar.get("provincia", "Desconocida")
             lat, lon = radar["latitude"], radar["longitude"]
+
             if (lat, lon) not in added_radar_locations:
-
-                html = f"""
-                <div data-provincia="{provincia}">
-                <div style="font-size:14px; line-height:1.25;">
-                    <div style="font-weight:700; font-size:15px;">Radar fijo (cabina)</div>
-                    <div style="font-weight:600;">Control de velocidad</div>
-                    <div style="font-style:italic; color:#444;">Ubicación puntual</div>
-
-                    <hr style="margin:8px 0;">
-
-                    <div>📍 <b>{radar.get('road','')}</b> · Km <b>{radar.get('kilometro','')}</b></div>
-                    <div>🏙️ {lugar} ({radar.get('provincia','Desconocida')})</div>
-                    <div>➡️ Sentido de circulación: {radar.get('sentido_kilometracion','Desconocido')}</div>
-
-                    <hr style="margin:8px 0;">
-
-                    <div style="margin-top:6px; font-size:12px; color:#666;">ID: {radar.get('radar_id_fijo','')}</div>
-                </div>
-                </div>
-                """
-
+                html = crear_popup_radar_cabina(radar, provincia, lugar)
 
                 folium.Marker(
                     location=[lat, lon],
                     tooltip=f"{radar['type']}<br>{provincia}",
                     popup=folium.Popup(html, max_width=300),
-                    icon=folium.Icon(color=icon_color, icon="tachometer-alt", prefix="fa")
+                    icon=folium.Icon(color="red", icon="tachometer-alt", prefix="fa")
                 ).add_to(cluster_radares)
+
                 added_radar_locations.add((lat, lon))
 
+        # Radar de tramo
         else:
             seg_id = f"radar_{radar['radar_id_ini']}_{radar['radar_id_fin']}"
             lat_ini_r, lon_ini_r = radar.get("latitude_ini"), radar.get("longitude_ini")
@@ -231,60 +265,39 @@ def create_actuales_map(eventos_df, radares_df, output_file="mapa_actuales.html"
                 ("INI", lat_ini_r, lon_ini_r, radar["radar_id_ini"]),
                 ("FIN", lat_fin_r, lon_fin_r, radar["radar_id_fin"])
             ]
-            lugar = radar.get("location_name") or radar.get("provincia", "Desconocida")
+
             for label, lat, lon, radar_id in coords:
                 if pd.notna(lat) and pd.notna(lon) and (lat, lon) not in added_radar_locations:
-
-                    html = f"""
-                    <div data-seg="{seg_id}"
-                        data-lat-ini="{lat_ini_r}" data-lng-ini="{lon_ini_r}"
-                        data-lat-fin="{lat_fin_r}" data-lng-fin="{lon_fin_r}"
-                        data-provincia="{provincia}" data-lat="{lat}" data-lng="{lon}">
-                    <div style="font-size:14px; line-height:1.25;">
-                        <div style="font-weight:700; font-size:15px;">Radar de tramo — {label}</div>
-                        <div style="font-weight:600;">Control de velocidad media</div>
-                        <div style="font-style:italic; color:#444;">Tramo controlado (línea en el mapa)</div>
-
-                        <hr style="margin:8px 0;">
-
-                        <div>📍 <b>{radar.get('road','')}</b> · Km ref. <b>{radar.get('kilometro','')}</b></div>
-                        <div>🏙️ {lugar} ({radar.get('provincia','Desconocida')})</div>
-                        <div>➡️ Sentido de circulación: {radar.get('sentido_kilometracion','Desconocido')}</div>
-
-                        <hr style="margin:8px 0;">
-
-                        <div style="font-size:12px; color:#666;">
-                        ID INI: {radar.get('radar_id_ini','')}<br>
-                        ID FIN: {radar.get('radar_id_fin','')}
-                        </div>
-                    </div>
-                    </div>
-                    """
-
+                    html = crear_popup_radar_tramo(
+                        radar, provincia, lugar, label, seg_id,
+                        lat, lon,
+                        lat_ini_r, lon_ini_r,
+                        lat_fin_r, lon_fin_r
+                    )
 
                     folium.Marker(
                         location=[lat, lon],
                         tooltip=f"{radar['type']}<br>{provincia}",
                         popup=folium.Popup(html, max_width=300),
                         icon=folium.Icon(
-                            color=icon_color,
+                            color="orange",
                             icon="arrow-right" if label == "FIN" else "arrow-left",
                             prefix="fa"
                         )
                     ).add_to(cluster_radares)
+
                     added_radar_locations.add((lat, lon))
 
-
     folium.LayerControl(collapsed=False).add_to(base_map)
+
     expose_leaflet_map(base_map)
-    add_segment_line_js(base_map, max_km=50) 
+    add_segment_line_js(base_map, max_km=50)
+
     save_atomic(base_map, output_file)
+
 
 # Actualizar el mapa
 def update_map():
-    from datetime import datetime, timezone
-    import os
-
     # Descarga de los datos fuente
     download_trafico("data/trafico.xml")
     download_radares("data/radares.xml")
@@ -293,16 +306,64 @@ def update_map():
     eventos_df = parse_datex("data/trafico.xml")
     radares_df = parse_radares("data/radares.xml")
 
-    # Provincias que saldrán en el desplegable
-    provincias = [
-    "A Coruña", "Albacete", "Alicante", "Almería", "Ávila", "Badajoz", "Barcelona", "Bilbao",
-    "Cádiz", "Castellón", "Ciudad Real", "Córdoba", "Cuenca", "Girona", "Granada", "Guadalajara",
-    "Huelva", "Huesca", "Jaén", "La Rioja", "Las Palmas", "León", "Lleida", "Lugo", "Madrid",
-    "Málaga", "Murcia", "Ourense", "Oviedo", "Palencia", "Pontevedra", "Salamanca", "San Sebastián",
-    "Santa Cruz de Tenerife", "Santander", "Segovia", "Sevilla", "Soria", "Tarragona", "Teruel",
-    "Toledo", "Valencia/València", "Valladolid", "Vitoria", "Zamora", "Zaragoza"
-    ]
-    opciones_provincia = "<br>".join([f'<option value="{prov}">{prov}</option>' for prov in provincias])    
+    # Provincias para meter en el zoom del desplegable
+    provincias_coords = {
+        "A Coruña": [43.3623, -8.4115],
+        "Albacete": [38.9943, -1.8585],
+        "Alicante": [38.3452, -0.4810],
+        "Almería": [36.8381, -2.4597],
+        "Ávila": [40.6565, -4.6818],
+        "Badajoz": [38.8786, -6.9703],
+        "Barcelona": [41.3888, 2.1590],
+        "Bilbao": [43.2630, -2.9350],
+        "Cádiz": [36.5160, -6.2994],
+        "Castellón": [39.9864, -0.0513],
+        "Ciudad Real": [38.9861, -3.9271],
+        "Córdoba": [37.8882, -4.7794],
+        "Cuenca": [40.0704, -2.1374],
+        "Girona": [41.9794, 2.8214],
+        "Granada": [37.1773, -3.5986],
+        "Guadalajara": [40.6330, -3.1669],
+        "Huelva": [37.2614, -6.9447],
+        "Huesca": [42.1401, -0.4089],
+        "Jaén": [37.7796, -3.7849],
+        "La Rioja": [42.4650, -2.4480],
+        "Las Palmas": [28.1272, -15.4314],
+        "León": [42.5987, -5.5671],
+        "Lleida": [41.6176, 0.6200],
+        "Lugo": [43.0097, -7.5560],
+        "Madrid": [40.4168, -3.7038],
+        "Málaga": [36.7213, -4.4214],
+        "Murcia": [37.9834, -1.1299],
+        "Ourense": [42.3360, -7.8642],
+        "Oviedo": [43.3619, -5.8494],
+        "Palencia": [42.0095, -4.5270],
+        "Pontevedra": [42.4333, -8.6333],
+        "Salamanca": [40.9701, -5.6635],
+        "San Sebastián": [43.3183, -1.9812],
+        "Santa Cruz de Tenerife": [28.4636, -16.2518],
+        "Santander": [43.4623, -3.8099],
+        "Segovia": [40.9481, -4.1184],
+        "Sevilla": [37.3886, -5.9823],
+        "Soria": [41.7666, -2.4689],
+        "Tarragona": [41.1189, 1.2445],
+        "Teruel": [40.3456, -1.1065],
+        "Toledo": [39.8628, -4.0273],
+        "Valencia/València": [39.4737, -0.3758],
+        "Valladolid": [41.6520, -4.7286],
+        "Vitoria": [42.8467, -2.6727],
+        "Zamora": [41.5033, -5.7446],
+        "Zaragoza": [41.6488, -0.8891],
+    }
+
+    opciones_provincia = "<br>".join(
+        [f'<option value="{prov}">{prov}</option>' for prov in provincias_coords.keys()]
+    )
+
+    coordenadas_js = "{\n"
+    for provincia, coords in provincias_coords.items():
+        coordenadas_js += f'    "{provincia.upper()}": {coords},\n'
+    coordenadas_js += '    "TODAS": [40.4168, -3.7038]\n}'
 
     # Filtrar eventos actuales
     now = datetime.now(timezone.utc)
@@ -355,9 +416,9 @@ def update_map():
                 <li>Incidencias y fútbol</li>
             </ol>
         </div>
-
     </div>
   </div>
+
   <div class="main">
     <div id="mapContent" class="tab-content active">
       <iframe id="iframe_actuales" style="width:100%; height:100%; border:none;"></iframe>
@@ -385,10 +446,13 @@ def update_map():
 
     const activateTab = (tab) => {{
         const isMap = tab === "map";
+
         tabMapa.classList.toggle("active", isMap);
         tabGrafica.classList.toggle("active", !isMap);
+
         mapContent.classList.toggle("active", isMap);
         reportContent.classList.toggle("active", !isMap);
+
         sidebarMapOptions.style.display = isMap ? "block" : "none";
         sidebarReportInfo.style.display = isMap ? "none" : "block";
     }};
@@ -396,55 +460,7 @@ def update_map():
     tabMapa.addEventListener("click", () => activateTab("map"));
     tabGrafica.addEventListener("click", () => activateTab("report"));
 
-    const coordenadas_provincias = {{
-    "A CORUÑA": [43.3623, -8.4115],
-    "ALBACETE": [38.9943, -1.8585],
-    "ALICANTE": [38.3452, -0.4810],
-    "ALMERÍA": [36.8381, -2.4597],
-    "ÁVILA": [40.6565, -4.6818],
-    "BADAJOZ": [38.8786, -6.9703],
-    "BARCELONA": [41.3888, 2.1590],
-    "BILBAO": [43.2630, -2.9350],
-    "CÁDIZ": [36.5160, -6.2994],
-    "CASTELLÓN": [39.9864, -0.0513],
-    "CIUDAD REAL": [38.9861, -3.9271],
-    "CÓRDOBA": [37.8882, -4.7794],
-    "CUENCA": [40.0704, -2.1374],
-    "GIRONA": [41.9794, 2.8214],
-    "GRANADA": [37.1773, -3.5986],
-    "GUADALAJARA": [40.6330, -3.1669],
-    "HUELVA": [37.2614, -6.9447],
-    "HUESCA": [42.1401, -0.4089],
-    "JAÉN": [37.7796, -3.7849],
-    "LA RIOJA": [42.4650, -2.4480],
-    "LAS PALMAS": [28.1272, -15.4314],
-    "LEÓN": [42.5987, -5.5671],
-    "LLEIDA": [41.6176, 0.6200],
-    "LUGO": [43.0097, -7.5560],
-    "MADRID": [40.4168, -3.7038],
-    "MÁLAGA": [36.7213, -4.4214],
-    "MURCIA": [37.9834, -1.1299],
-    "OURENSE": [42.3360, -7.8642],
-    "OVIEDO": [43.3619, -5.8494],
-    "PALENCIA": [42.0095, -4.5270],
-    "PONTEVEDRA": [42.4333, -8.6333],
-    "SALAMANCA": [40.9701, -5.6635],
-    "SAN SEBASTIÁN": [43.3183, -1.9812],
-    "SANTA CRUZ DE TENERIFE": [28.4636, -16.2518],
-    "SANTANDER": [43.4623, -3.8099],
-    "SEGOVIA": [40.9481, -4.1184],
-    "SEVILLA": [37.3886, -5.9823],
-    "SORIA": [41.7666, -2.4689],
-    "TARRAGONA": [41.1189, 1.2445],
-    "TERUEL": [40.3456, -1.1065],
-    "TOLEDO": [39.8628, -4.0273],
-    "VALENCIA/VALÈNCIA": [39.4737, -0.3758],
-    "VALLADOLID": [41.6520, -4.7286],
-    "VITORIA": [42.8467, -2.6727],
-    "ZAMORA": [41.5033, -5.7446],
-    "ZARAGOZA": [41.6488, -0.8891],
-    "TODAS": [40.4168, -3.7038]
-}};
+    const coordenadas_provincias = {coordenadas_js};
 
     document.getElementById("provinciaSelect").addEventListener("change", function () {{
         const seleccion = this.value.trim().toUpperCase();
@@ -454,6 +470,7 @@ def update_map():
         const intentarZoom = () => {{
             try {{
                 const mapa = iframeActuales.contentWindow.map;
+
                 if (mapa && typeof mapa.setView === "function") {{
                     mapa.setView(coords, zoom);
                 }} else {{
@@ -463,10 +480,11 @@ def update_map():
                 setTimeout(intentarZoom, 200);
             }}
         }};
+
         intentarZoom();
     }});
 
-    // Recargar solo el iframe del mapa cada 2 minutos (sin tocar la página completa para que no se reinicien las graficas)
+    // Recarga solo el iframe del mapa, no toda la página
     setInterval(() => {{
         iframeActuales.src = "/mapa_actuales.html?ts=" + Date.now();
     }}, 120000);
@@ -475,8 +493,7 @@ def update_map():
 </body>
 </html>"""
 
-    
-    # Escribir de forma atómica para evitar corrupción
+    # Escritura atómica para evitar que se lea el HTML mientras se está generando
     temp_path = "mapas_generados/mapa_completo.tmp.html"
     final_path = "mapas_generados/mapa_completo.html"
 
