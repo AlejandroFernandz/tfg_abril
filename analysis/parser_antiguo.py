@@ -258,7 +258,8 @@ def parse_datex_historico_enriquecido(file_path: str) -> pd.DataFrame:
         )
         road = _extract_road_old(situation, ns)
         provincia = _extract_provincia_old(situation, ns)
-
+        
+        # Carril afectado por la incidencia
         carril_usado = _text(situation.find(".//loc:lane/loc:laneUsage", namespaces=ns)) or "Carril original"
 
         # kms

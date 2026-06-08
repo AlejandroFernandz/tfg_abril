@@ -1,5 +1,4 @@
-# Genera un csv para usar segmentadores/filtros en pbi
-
+# Genera un csv con las columnas mas importantes y añade campos e incorpora diferentes atributos temporales
 import os
 import pandas as pd
 

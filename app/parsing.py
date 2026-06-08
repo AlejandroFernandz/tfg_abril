@@ -83,6 +83,7 @@ TRAD_CAUSE_TYPE = {
     "roadMaintenance": "Mantenimiento de la vía",
     "roadOrCarriagewayOrLaneManagement": "Gestión de carril / calzada",
     "vehicleObstruction": "Obstrucción por vehículo",
+    "publicEvent": "Evento público",
 }
 # Traducciones para detailedCauseType (cause_detail)
 TRAD_CAUSE_DETAIL = {
@@ -91,17 +92,25 @@ TRAD_CAUSE_DETAIL = {
     "vehicleStuck": "Vehículo atascado",
     "vehicleOnFire": "Vehículo en llamas",
     "animalsOnTheRoad": "Animales en la calzada",
+    "avalanches": "Avalanchas",
+    "majorEvent": "Evento importante",
+    "rockfalls": "Caída de rocas",
+    "spillageOnTheRoad": "Derrame en la vía",
 
     # Tráfico / accidentes
     "accident": "Accidente",
     "seriousAccident": "Accidente grave",
     "multiVehicleAccident": "Accidente múltiple",
+    "heavyTraffic": "Tráfico intenso",
+    "slowTraffic": "Tráfico lento",
+    "vehicleCarryingHazardousMaterials": "Vehículo con materiales peligrosos",
 
     # Obras / mantenimiento
     "roadworks": "Obras",
     "maintenanceWorks": "Trabajos de mantenimiento",
     "resurfacing": "Reasfaltado",
     "laneClosures": "Cierre de carriles",
+    "damagedRoadSurface": "Daños enla vía",
 
     # Meteorología
     "heavyRain": "Lluvias intensas",
@@ -109,10 +118,13 @@ TRAD_CAUSE_DETAIL = {
     "ice": "Hielo",
     "fog": "Niebla",
     "strongWinds": "Viento fuerte",
+    "flooding": "Inundaciones",
 
     # Infraestructura
     "bridgeDamage": "Daños en puente",
     "tunnelClosure": "Cierre de túnel",
+
+    "other": "Otros",
 }
 
 
