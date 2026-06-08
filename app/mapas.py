@@ -123,7 +123,7 @@ def create_actuales_map(eventos_df, radares_df, output_file="mapa_actuales.html"
                     → Km <b>{event.get('kilometro_fin','')}</b> — {event.get('locality_fin','Desconocido')}
                     </div>
                     <div>➡️ Sentido de circulación: {event.get('sentido_kilometracion','Sentido desconocido')}</div>
-                    <div>🛣️ Carril: {event.get('carril_usado','')}</div>
+                    <div>🛣️ Carril afectado: {event.get('carril_usado','')}</div>
 
                     <hr style="margin:8px 0;">
 
@@ -153,7 +153,7 @@ def create_actuales_map(eventos_df, radares_df, output_file="mapa_actuales.html"
                     → Km <b>{event.get('kilometro_fin','')}</b> — {event.get('locality_fin','Desconocido')}
                     </div>
                     <div>➡️ Sentido de circulación: {event.get('sentido_kilometracion','Sentido desconocido')}</div>
-                    <div>🛣️ Carril: {event.get('carril_usado','')}</div>
+                    <div>🛣️ Carril afectado: {event.get('carril_usado','')}</div>
 
                     <hr style="margin:8px 0;">
 
@@ -334,8 +334,8 @@ def update_map():
 
 <div class="layout">
   <div class="sidebar">
-    <button id="tabMapa" class="tab-button active">Mapa</button>
-    <button id="tabGrafica" class="tab-button">Gráficas</button>
+    <button id="tabMapa" class="tab-button active">Mapa interactivo</button>
+    <button id="tabGrafica" class="tab-button">Análisis histórico</button>
 
     <div id="sidebarMapOptions" class="sidebar-section">
       <label for="provinciaSelect"><b>Filtrar por provincia:</b></label><br>
