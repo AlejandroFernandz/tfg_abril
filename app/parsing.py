@@ -93,9 +93,11 @@ TRAD_CAUSE_DETAIL = {
     "vehicleOnFire": "Vehículo en llamas",
     "animalsOnTheRoad": "Animales en la calzada",
     "avalanches": "Avalanchas",
+    "Avalanches": "Avalanchas",
     "majorEvent": "Evento importante",
     "rockfalls": "Caída de rocas",
     "spillageOnTheRoad": "Derrame en la vía",
+    "Abnormalload": "Carga excesiva",
 
     # Tráfico / accidentes
     "accident": "Accidente",
@@ -104,13 +106,23 @@ TRAD_CAUSE_DETAIL = {
     "heavyTraffic": "Tráfico intenso",
     "slowTraffic": "Tráfico lento",
     "vehicleCarryingHazardousMaterials": "Vehículo con materiales peligrosos",
+    "Cyclistsonroadway": "Ciclistas en la vía",
+    "Queuingtraffic": "Formación de colas",
+    "Reduceyourspeed": "Reducir la velocidad",
+    "Slowtraffic": "Tráfico lento",
+    "Slowvehicle": "Vehículo lento",
 
     # Obras / mantenimiento
     "roadworks": "Obras",
     "maintenanceWorks": "Trabajos de mantenimiento",
     "resurfacing": "Reasfaltado",
     "laneClosures": "Cierre de carriles",
-    "damagedRoadSurface": "Daños enla vía",
+    "damagedRoadSurface": "Daños en la vía",
+    "Followspecialmarkers": "Desvío señalizado",
+    "Hardshoulderrunninginoperation": "Desvío por arcén",
+    "Unspecifiedabnormaltraffic": "Tráfico anómalo no especificado",
+    "Vehiclestorageinoperation": "Almacenamiento de vehículos en operación",
+
 
     # Meteorología
     "heavyRain": "Lluvias intensas",
@@ -119,10 +131,17 @@ TRAD_CAUSE_DETAIL = {
     "fog": "Niebla",
     "strongWinds": "Viento fuerte",
     "flooding": "Inundaciones",
+    "smokeHazard": "Peligro por humo",
+    "Snowploughsinuse": "Uso de quitanieves",
+    "Usesnowchainsortyres": "Usar cadenas o neumáticos de nieve",
+
 
     # Infraestructura
     "bridgeDamage": "Daños en puente",
     "tunnelClosure": "Cierre de túnel",
+
+    "Demonstration":"Manifestación",
+    "Useofspecifiedlanesorcarriagewaysallowed":"Uso de carriles o calzadas especificados permitido",
 
     "other": "Otros",
 }
@@ -220,6 +239,15 @@ def parse_datex(file_path="trafico.xml"):
         prov_el = situation.find(".//lse:province", namespaces=ns)
         provincia = prov_el.text if prov_el is not None else "Desconocida"
 
+        normalizacion_provincias = {
+        "València/Valencia": "Valencia",
+        "Castelló/Castellón": "Castellón",
+        "Alacant/Alicante": "Alicante",
+        "Illes Balears": "Islas Baleares",
+        }
+
+        provincia = normalizacion_provincias.get(provincia, provincia)
+
         # Kms
         km_from_el = situation.find(".//loc:from//lse:kilometerPoint", namespaces=ns)
         km_to_el   = situation.find(".//loc:to//lse:kilometerPoint", namespaces=ns)
@@ -249,8 +277,8 @@ def parse_datex(file_path="trafico.xml"):
         }
         traducciones_sentido = {
             "both": "Ambos",
-            "negative": "Decreciente de la km",
-            "positive": "Creciente de la km",}
+            "negative": "Decreciente del kilometraje",
+            "positive": "Creciente del kilometraje",}
 
         carril_usado = traducciones_carril.get(carril_usado, carril_usado)
         sentido_kilometracion_ini = traducciones_sentido.get(sentido_kilometracion_ini, sentido_kilometracion_ini)
@@ -380,9 +408,22 @@ def parse_radares(file_path="radares.xml"):
         road_name = predefined_location.find(".//_0:roadName/_0:value", namespaces=ns).text # Nombre de la carretera
         
         provincia = predefined_location.find(".//_0:administrativeArea/_0:value", namespaces=ns)
-        provincia = provincia.text if provincia is not None else "Desconocida"
+        provincia = provincia.text.title() if provincia is not None else "Desconocida"
+
+        normalizacion_provincias = {
+        "Valencia/València": "Valencia",
+        "Castellón/Castelló": "Castellón",
+        "Alicante/Alacant": "Alicante",
+        "Balears, Illes": "Islas Baleares",
+        "Palmas, Las": "Las Palmas",
+        "Coruña, A": "A Coruña",
+        }
+
+        provincia = normalizacion_provincias.get(provincia, provincia)
+
+
         loc_name_el = predefined_location.find(".//_0:predefinedLocationName/_0:value", namespaces=ns)
-        location_name = loc_name_el.text.strip() if (loc_name_el is not None and loc_name_el.text) else None
+        location_name = loc_name_el.text.strip().title() if (loc_name_el is not None and loc_name_el.text) else None
 
         #  Filtrar nombres "técnicos" tipo CVM_, CABINACINEMOMETRO_, GUID_
         if location_name:
@@ -401,10 +442,10 @@ def parse_radares(file_path="radares.xml"):
 
         sentido_kilometracion = predefined_location.find(".//_0:directionRelative", namespaces=ns).text # Sentido RADAR FIJO y RADAR DE TRAMO
         if sentido_kilometracion == "negative":
-            sentido_kilometracion = "Decreciente de la km"
+            sentido_kilometracion = "Decreciente del kilometraje"
         else:
-            sentido_kilometracion = "Creciente de la km"
-        
+            sentido_kilometracion = "Creciente del kilometraje"
+
         # En el caso de que el radar sea de cabina (un punto en el mapa)
         location_point = predefined_location.find(".//_0:point/_0:pointCoordinates", namespaces=ns)
         if location_point is not None:
