@@ -100,7 +100,6 @@ def crear_popup_radar_cabina(radar, provincia, lugar):
     <div style="font-size:14px; line-height:1.25;">
         <div style="font-weight:700; font-size:15px;">Radar fijo (cabina)</div>
         <div style="font-weight:600;">Control de velocidad</div>
-        <div style="font-style:italic; color:#444;">Ubicación puntual</div>
 
         <hr style="margin:8px 0;">
 
@@ -125,7 +124,7 @@ def crear_popup_radar_tramo(radar, provincia, lugar, label, seg_id, lat, lon, la
     <div style="font-size:14px; line-height:1.25;">
         <div style="font-weight:700; font-size:15px;">Radar de tramo — {label}</div>
         <div style="font-weight:600;">Control de velocidad media</div>
-        <div style="font-style:italic; color:#444;">Tramo controlado (línea en el mapa)</div>
+        <div style="font-style:italic; color:#444;">Tramo controlado por segmento</div>
 
         <hr style="margin:8px 0;">
 
@@ -149,11 +148,15 @@ def create_actuales_map(eventos_df, radares_df, output_file="mapa_actuales.html"
     OFFSET = 0.0001
     added_locations = set()
     added_radar_locations = set()
+    # Se inicia el mapa vacio centrado en España
+    base_map = folium.Map(location=[40.4168, -3.7038], zoom_start=6, tiles = None)
 
-    base_map = folium.Map(location=[40.4168, -3.7038], zoom_start=6)
-
+    # Para usar el opnestreet map pero que no aparezca l aopcion de cmabiar entre apas porque solo hay una
+    folium.TileLayer("OpenStreetMap", control=False).add_to(base_map)
+    
+    # Crear las casillas seleccionables de incidencias y radares
     cluster_eventos = MarkerCluster(
-        name="Eventos agrupados",
+        name="Incidencias agrupadas",
         maxClusterRadius=50,
         disableClusteringAtZoom=15
     ).add_to(base_map)
@@ -314,8 +317,11 @@ def update_map():
         "Almería": [36.8381, -2.4597],
         "Ávila": [40.6565, -4.6818],
         "Badajoz": [38.8786, -6.9703],
+        "Baleares": [39.5696, 2.6502],
         "Barcelona": [41.3888, 2.1590],
         "Bilbao": [43.2630, -2.9350],
+        "Burgos": [42.3440, -3.6969],
+        "Cáceres": [39.4765, -6.3722],
         "Cádiz": [36.5160, -6.2994],
         "Castellón": [39.9864, -0.0513],
         "Ciudad Real": [38.9861, -3.9271],
@@ -328,13 +334,14 @@ def update_map():
         "Huesca": [42.1401, -0.4089],
         "Jaén": [37.7796, -3.7849],
         "La Rioja": [42.4650, -2.4480],
-        "Las Palmas": [28.1272, -15.4314],
+        "Las Palmas": [28.1235, -15.4363],
         "León": [42.5987, -5.5671],
         "Lleida": [41.6176, 0.6200],
         "Lugo": [43.0097, -7.5560],
         "Madrid": [40.4168, -3.7038],
         "Málaga": [36.7213, -4.4214],
         "Murcia": [37.9834, -1.1299],
+        "Navarra": [42.8125, -1.6458],
         "Ourense": [42.3360, -7.8642],
         "Oviedo": [43.3619, -5.8494],
         "Palencia": [42.0095, -4.5270],
@@ -349,12 +356,13 @@ def update_map():
         "Tarragona": [41.1189, 1.2445],
         "Teruel": [40.3456, -1.1065],
         "Toledo": [39.8628, -4.0273],
-        "Valencia/València": [39.4737, -0.3758],
+        "Valencia": [39.4737, -0.3758],
         "Valladolid": [41.6520, -4.7286],
         "Vitoria": [42.8467, -2.6727],
         "Zamora": [41.5033, -5.7446],
         "Zaragoza": [41.6488, -0.8891],
     }
+
 
     opciones_provincia = "<br>".join(
         [f'<option value="{prov}">{prov}</option>' for prov in provincias_coords.keys()]
@@ -465,7 +473,7 @@ def update_map():
     document.getElementById("provinciaSelect").addEventListener("change", function () {{
         const seleccion = this.value.trim().toUpperCase();
         const coords = coordenadas_provincias[seleccion] || coordenadas_provincias["TODAS"];
-        const zoom = seleccion === "TODAS" ? 6 : 10;
+        const zoom = seleccion === "TODAS" ? 6 : 9;
 
         const intentarZoom = () => {{
             try {{
