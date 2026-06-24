@@ -438,8 +438,25 @@ def parse_radares(file_path="radares.xml"):
 
   
 
-        kilometro = predefined_location.find(".//_0:referencePointDistance", namespaces=ns).text # Punto kilometrico en carretera para RADAR FIJO y RADAR DE TRAMO
+        km_ini_el = predefined_location.find(
+            ".//_0:referencePointPrimaryLocation/_0:referencePoint/_0:referencePointDistance",
+            namespaces=ns
+        )
 
+        km_fin_el = predefined_location.find(
+            ".//_0:referencePointSecondaryLocation/_0:referencePoint/_0:referencePointDistance",
+            namespaces=ns
+        )
+
+        km_fijo_el = predefined_location.find(
+            ".//_0:referencePoint/_0:referencePointDistance",
+            namespaces=ns
+        )
+
+        kilometro_ini = float(km_ini_el.text) / 1000 if km_ini_el is not None and km_ini_el.text else None
+        kilometro_fin = float(km_fin_el.text) / 1000 if km_fin_el is not None and km_fin_el.text else None
+        kilometro_fijo = float(km_fijo_el.text) / 1000 if km_fijo_el is not None and km_fijo_el.text else None
+        
         sentido_kilometracion = predefined_location.find(".//_0:directionRelative", namespaces=ns).text # Sentido RADAR FIJO y RADAR DE TRAMO
         if sentido_kilometracion == "negative":
             sentido_kilometracion = "Decreciente del kilometraje"
@@ -460,7 +477,7 @@ def parse_radares(file_path="radares.xml"):
                     "location_name": location_name,
                     "latitude": float(latitude.text),
                     "longitude": float(longitude.text),
-                    "kilometro": float(kilometro)*1/1000,
+                    "kilometro": kilometro_fijo,
                     "sentido_kilometracion": sentido_kilometracion
                 })
         # En el caso de que sea un radar de tramo, y que por lo tanto haya dos pares de coordenadas:
@@ -481,7 +498,8 @@ def parse_radares(file_path="radares.xml"):
                     "road": road_name,
                     "provincia": provincia,
                     "location_name": location_name,
-                    "kilometro": float(kilometro)*1/1000,
+                    "kilometro_ini": kilometro_ini,
+                    "kilometro_fin": kilometro_fin,
                     "sentido_kilometracion": sentido_kilometracion,
                     "latitude_ini": float(latitude_ini.text),
                     "longitude_ini": float(longitude_ini.text),

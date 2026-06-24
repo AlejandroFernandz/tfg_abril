@@ -116,6 +116,15 @@ def crear_popup_radar_cabina(radar, provincia, lugar):
 
 
 def crear_popup_radar_tramo(radar, provincia, lugar, label, seg_id, lat, lon, lat_ini_r, lon_ini_r, lat_fin_r, lon_fin_r):
+    if label == "INI":
+        km_mostrado = radar.get("kilometro_ini", "")
+        id_punto = radar.get("radar_id_ini", "")
+        titulo_punto = "Inicio del tramo"
+    else:
+        km_mostrado = radar.get("kilometro_fin", "")
+        id_punto = radar.get("radar_id_fin", "")
+        titulo_punto = "Final del tramo"
+
     return f"""
     <div data-seg="{seg_id}"
         data-lat-ini="{lat_ini_r}" data-lng-ini="{lon_ini_r}"
@@ -123,12 +132,12 @@ def crear_popup_radar_tramo(radar, provincia, lugar, label, seg_id, lat, lon, la
         data-provincia="{provincia}" data-lat="{lat}" data-lng="{lon}">
     <div style="font-size:14px; line-height:1.25;">
         <div style="font-weight:700; font-size:15px;">Radar de tramo — {label}</div>
-        <div style="font-weight:600;">Control de velocidad media</div>
-        <div style="font-style:italic; color:#444;">Tramo controlado por segmento</div>
+        <div style="font-weight:600;">{titulo_punto}</div>
+        <div style="font-style:italic; color:#444;">Control de velocidad media</div>
 
         <hr style="margin:8px 0;">
 
-        <div>📍 <b>{radar.get('road','')}</b> · Km ref. <b>{radar.get('kilometro','')}</b></div>
+        <div>📍 <b>{radar.get('road','')}</b> · Km <b>{km_mostrado}</b></div>
         <div>🏙️ {lugar} ({radar.get('provincia','Desconocida')})</div>
         <div>➡️ Sentido de circulación: {radar.get('sentido_kilometracion','Desconocido')}</div>
 
